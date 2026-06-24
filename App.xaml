@@ -1,0 +1,35 @@
+<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:AppCobros"
+             x:Class="AppCobros.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+                <ResourceDictionary Source="Resources/Styles/AppStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Dark Mode Color Tokens -->
+            <Color x:Key="AppBackgroundLight">#F4F3FB</Color>
+            <Color x:Key="AppBackgroundDark">#141221</Color>
+
+            <Color x:Key="CardBackgroundLight">#FFFFFF</Color>
+            <Color x:Key="CardBackgroundDark">#221C44</Color>
+
+            <Color x:Key="CardStrokeLight">#DEDCEE</Color>
+            <Color x:Key="CardStrokeDark">#3A3370</Color>
+
+            <Color x:Key="TextPrimaryLight">#221C44</Color>
+            <Color x:Key="TextPrimaryDark">#F5F3FF</Color>
+
+            <Color x:Key="TextSecondaryLight">#75718F</Color>
+            <Color x:Key="TextSecondaryDark">#8D88B5</Color>
+
+            <Color x:Key="EntryBackgroundLight">#F4F3FB</Color>
+            <Color x:Key="EntryBackgroundDark">#1A172C</Color>
+
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

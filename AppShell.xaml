@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="AppCobros.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:AppCobros.Pages"
+    Shell.FlyoutBehavior="Disabled"
+    Title="AppCobros"
+    BackgroundColor="#221C44"
+    UnselectedColor="#8D88B5"
+    TabBarBackgroundColor="#221C44"
+    TabBarUnselectedColor="#8D88B5"
+    TabBarTitleColor="#FFB547">
+
+    <TabBar>
+        <Tab Title="Dashboard">
+            <Tab.Icon>
+                <FontImageSource FontFamily="OpenSansRegular" Glyph="📊" Color="#FFB547"/>
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate pages:DashboardPage}" />
+        </Tab>
+        <Tab Title="Gestión">
+            <Tab.Icon>
+                <FontImageSource FontFamily="OpenSansRegular" Glyph="🏠" Color="#FFB547"/>
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate pages:InicioPage}" />
+        </Tab>
+        <Tab Title="Clientes">
+            <Tab.Icon>
+                <FontImageSource FontFamily="OpenSansRegular" Glyph="👥" Color="#FFB547"/>
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate pages:ClientesPage}" />
+        </Tab>
+        <Tab Title="Ajustes">
+            <Tab.Icon>
+                <FontImageSource FontFamily="OpenSansRegular" Glyph="⚙️" Color="#FFB547"/>
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate pages:AjustesPage}" />
+        </Tab>
+    </TabBar>
+
+</Shell>

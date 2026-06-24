@@ -1,0 +1,105 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:AppCobros.PageModels"
+             x:Class="AppCobros.Pages.AjustesPage"
+             Title="{Binding Title}"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <ScrollView Padding="14">
+        <VerticalStackLayout Spacing="12">
+            
+            <!-- Grupos y Cuotas -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="GRUPOS Y CUOTAS" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    
+                    <StackLayout BindableLayout.ItemsSource="{Binding Grupos}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8" Margin="0,0,0,10">
+                                    <Entry Grid.Column="0" Text="{Binding Nombre}" Placeholder="Nombre" BackgroundColor="#F4F3FB" TextColor="#221C44" />
+                                    <Entry Grid.Column="1" Text="{Binding Cuota}" Placeholder="Cuota" Keyboard="Numeric" BackgroundColor="#F4F3FB" TextColor="#221C44" />
+                                    <Button Grid.Column="2" Text="🗑" BackgroundColor="#FBE5E2" TextColor="#E14D43" CornerRadius="8" WidthRequest="38" HeightRequest="38" 
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AjustesViewModel}}, Path=EliminarGrupoCommand}" CommandParameter="{Binding .}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </StackLayout>
+                    
+                    <Button Text="＋ Agregar grupo" BackgroundColor="Transparent" TextColor="#3A3370" BorderColor="#DEDCEE" BorderWidth="1.5" CornerRadius="10" Command="{Binding AgregarGrupoCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Anexos -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="ANEXOS" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    <Label Text="Precio por anexo (mensual)" FontSize="13" TextColor="#221C44" FontAttributes="Bold" />
+                    <Entry Text="{Binding Config.Anexo}" Keyboard="Numeric" BackgroundColor="#F4F3FB" TextColor="#221C44" />
+                    <Label Text="Se suma a la cuota del grupo por cada anexo que tenga el cliente." FontSize="11" TextColor="#75718F" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Plantilla Cobro -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="MENSAJE AL REGISTRAR COBRO" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    <Editor Text="{Binding Config.Plantilla}" AutoSize="TextChanges" BackgroundColor="#F4F3FB" TextColor="#221C44" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Plantilla Recordatorio -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="MENSAJE DE RECORDATORIO" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    <Editor Text="{Binding Config.PlantillaRec}" AutoSize="TextChanges" BackgroundColor="#F4F3FB" TextColor="#221C44" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Enlace de Pago -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="ENLACE DE PAGO (ALIAS, CBU, LINK)" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    <Editor Text="{Binding Config.EnlacePago}" AutoSize="TextChanges" BackgroundColor="#F4F3FB" TextColor="#221C44" Placeholder="Ej: mi.alias.mp" />
+                    <Label Text="Podés usar el comodín {enlace_pago} en los mensajes de arriba." FontSize="11" TextColor="#75718F" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Copia de Seguridad en la Nube -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="COPIA DE SEGURIDAD (DRIVE / NUBE)" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    <Label Text="Guardá un respaldo de toda tu información en tu Drive o correo, o restaurala si cambiaste de celular." FontSize="11" TextColor="#75718F" />
+                    
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0" Text="☁️ Guardar Backup" BackgroundColor="#0FA36B" TextColor="White" CornerRadius="10" Command="{Binding ExportarArchivoCommand}" />
+                        <Button Grid.Column="1" Text="🔄 Restaurar Backup" BackgroundColor="#FBE5E2" TextColor="#E14D43" CornerRadius="10" Command="{Binding ImportarArchivoCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Importar / Exportar JSON Manual -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="EXPORTAR DATOS" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    <Button Text="⬆ Generar Exportación" BackgroundColor="#F4F3FB" TextColor="#221C44" CornerRadius="10" Command="{Binding ExportarJsonCommand}" />
+                    
+                    <VerticalStackLayout IsVisible="{Binding HayExportText}" Spacing="10">
+                        <Editor Text="{Binding ExportText}" IsReadOnly="True" HeightRequest="80" BackgroundColor="#F4F3FB" TextColor="#221C44" FontSize="11" />
+                        <Button Text="📋 Copiar al portapapeles" BackgroundColor="#221C44" TextColor="#F5F3FF" CornerRadius="10" Command="{Binding CopiarExportCommand}" />
+                    </VerticalStackLayout>
+
+                    <BoxView HeightRequest="1" Color="#DEDCEE" Margin="0,10" />
+
+                    <Label Text="IMPORTAR DATOS" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    <Label Text="Pegá acá el texto exportado para restaurar la información." FontSize="11" TextColor="#75718F" />
+                    <Editor Text="{Binding ImportText}" HeightRequest="80" BackgroundColor="#F4F3FB" TextColor="#221C44" Placeholder="Pegar JSON..." FontSize="11" />
+                    <Button Text="⬇ Importar y reemplazar" BackgroundColor="#E14D43" TextColor="#F5F3FF" CornerRadius="10" Command="{Binding ImportarJsonCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button Text="Guardar ajustes" BackgroundColor="#0FA36B" TextColor="#F5F3FF" CornerRadius="10" Margin="0,10,0,20" Command="{Binding GuardarAjustesCommand}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

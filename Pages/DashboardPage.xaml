@@ -1,0 +1,92 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:AppCobros.PageModels"
+             x:Class="AppCobros.Pages.DashboardPage"
+             Title="{Binding Title}"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <ScrollView Padding="14">
+        <VerticalStackLayout Spacing="12">
+            
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto, Auto" RowSpacing="10">
+                <!-- Cobranza Mes Actual -->
+                <Border Grid.Row="0" Grid.Column="0" BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="COBRADO ESTE MES" TextColor="#75718F" FontSize="10" FontAttributes="Bold" CharacterSpacing="1" />
+                        <Label Text="{Binding CobranzaMesActual, StringFormat='{0:C0}'}" TextColor="#0FA36B" FontSize="18" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                </Border>
+                
+                <!-- Deuda Total -->
+                <Border Grid.Row="0" Grid.Column="1" BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="DEUDA EN CALLE" TextColor="#75718F" FontSize="10" FontAttributes="Bold" CharacterSpacing="1" />
+                        <Label Text="{Binding DeudaTotal, StringFormat='{0:C0}'}" TextColor="#E14D43" FontSize="18" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Proyección de Ingresos -->
+                <Border Grid.Row="1" Grid.Column="0" BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="PROYECCIÓN MENSUAL" TextColor="#75718F" FontSize="10" FontAttributes="Bold" CharacterSpacing="1" />
+                        <Label Text="{Binding ProyeccionIngresos, StringFormat='{0:C0}'}" TextColor="#221C44" FontSize="18" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Clientes Activos -->
+                <Border Grid.Row="1" Grid.Column="1" BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="CLIENTES ACTIVOS" TextColor="#75718F" FontSize="10" FontAttributes="Bold" CharacterSpacing="1" />
+                        <Label Text="{Binding ClientesActivos}" TextColor="#221C44" FontSize="18" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Historial de Cobros (Últimos 6 meses) -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="HISTORIAL DE COBROS (6 MESES)" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    
+                    <StackLayout BindableLayout.ItemsSource="{Binding HistorialCobros}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:HistorialMesViewModel">
+                                <Grid ColumnDefinitions="90, *, 80" ColumnSpacing="10" VerticalOptions="Center">
+                                    <Label Grid.Column="0" Text="{Binding MesLabel}" FontSize="12" TextColor="#75718F" VerticalOptions="Center" />
+                                    <!-- ProgressBar simulation -->
+                                    <Grid Grid.Column="1" HeightRequest="16" BackgroundColor="#F4F3FB" VerticalOptions="Center">
+                                        <BoxView HorizontalOptions="Start" WidthRequest="{Binding HeightPercentage, StringFormat='{0}*'}" BackgroundColor="#8FE6BE" CornerRadius="4"/>
+                                    </Grid>
+                                    <Label Grid.Column="2" Text="{Binding MontoTexto}" FontSize="12" FontAttributes="Bold" TextColor="#221C44" HorizontalOptions="End" VerticalOptions="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </StackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Top Deudores -->
+            <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="MAYORES DEUDORES" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                    
+                    <StackLayout BindableLayout.ItemsSource="{Binding TopDeudores}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ClientItemViewModel">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,0,0,8" Padding="0,0,0,8">
+                                    <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                                        <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="15" />
+                                        <Label Text="{Binding SaldoTexto, StringFormat='Debe {0}'}" FontSize="12" TextColor="#E14D43" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="1" Text="Reclamar" BackgroundColor="#1FAF59" TextColor="White" HeightRequest="35" Padding="10,0" CornerRadius="8"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DashboardViewModel}}, Path=EnviarRecordatorioCommand}" CommandParameter="{Binding .}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </StackLayout>
+                    
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

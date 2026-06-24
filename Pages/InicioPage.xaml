@@ -1,0 +1,103 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:AppCobros.PageModels"
+             x:Class="AppCobros.Pages.InicioPage"
+             Title="{Binding Title}"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Border Grid.Row="0" BackgroundColor="#221C44" StrokeThickness="0" Padding="18,18,18,20">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="0,0,10,10" />
+            </Border.StrokeShape>
+            <VerticalStackLayout Spacing="14">
+                <Label Text="LIBRETA DE COBROS" TextColor="#FFB547" FontSize="13" FontAttributes="Bold" CharacterSpacing="2.2" />
+                <Label Text="{Binding MesActual, StringFormat='{0} · Resumen'}" TextColor="#B7B3D9" FontSize="12" />
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Border Grid.Column="0" BackgroundColor="#10FFFFFF" Stroke="#1EFFFFFF" Padding="12,10" StrokeShape="RoundRectangle 10">
+                        <VerticalStackLayout>
+                            <Label Text="POR COBRAR" TextColor="#A5A0CC" FontSize="10" CharacterSpacing="1.4" />
+                            <Label Text="{Binding TotalPendiente, StringFormat='{0:C0}'}" TextColor="#FFB0A5" FontSize="17" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Grid.Column="1" BackgroundColor="#10FFFFFF" Stroke="#1EFFFFFF" Padding="12,10" StrokeShape="RoundRectangle 10">
+                        <VerticalStackLayout>
+                            <Label Text="COBRADO ESTE MES" TextColor="#A5A0CC" FontSize="10" CharacterSpacing="1.4" />
+                            <Label Text="{Binding TotalCobradoMes, StringFormat='{0:C0}'}" TextColor="#8FE6BE" FontSize="17" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- Content -->
+        <ScrollView Grid.Row="1" Padding="14,16,14,0">
+            <VerticalStackLayout Spacing="12">
+                
+                <!-- Cuotas del mes -->
+                <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="CUOTAS DEL MES" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                        
+                        <VerticalStackLayout IsVisible="{Binding HayClientesSinFacturar}" Spacing="10">
+                            <Label Text="{Binding ClientesSinFacturarCount, StringFormat='{0} cliente(s) sin la cuota de este mes cargada.'}" TextColor="#75718F" FontSize="13" />
+                            <Button Text="Cargar cuotas del mes a todos" BackgroundColor="#221C44" TextColor="#F5F3FF" CornerRadius="10" Command="{Binding CargarCuotasDelMesCommand}" />
+                        </VerticalStackLayout>
+
+                        <Border BackgroundColor="#DDF5EA" Stroke="#BCE8D4" Padding="12,11" StrokeShape="RoundRectangle 10" 
+                                IsVisible="{Binding TodosFacturados}">
+                            <Label Text="✓ Todas las cuotas del mes ya están cargadas." TextColor="#221C44" FontSize="13" />
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Cuentas con deuda -->
+                <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="CUENTAS CON DEUDA" TextColor="#75718F" FontSize="11" FontAttributes="Bold" CharacterSpacing="1.6" />
+                        
+                        <Button Text="📲 Reclamar a todos por WhatsApp" BackgroundColor="#1FAF59" TextColor="White" CornerRadius="10" Command="{Binding ReclamarATodosCommand}" />
+
+                        <CollectionView ItemsSource="{Binding ClientesConDeuda}">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ClientItemViewModel">
+                                    <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="12" Margin="0,0,0,9">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:InicioViewModel}}, Path=GoToClientCommand}" CommandParameter="{Binding Client.Id}" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="10">
+                                            <Border Grid.Column="0" BackgroundColor="#1FAF59" StrokeThickness="0" StrokeShape="RoundRectangle 9" WidthRequest="40" HeightRequest="40">
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border" Binding="{Binding Exigible}" Value="True">
+                                                        <Setter Property="BackgroundColor" Value="#FBE5E2" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Label Text="{Binding Iniciales}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold">
+                                                    <Label.Triggers>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding Exigible}" Value="True">
+                                                            <Setter Property="TextColor" Value="#E14D43" />
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
+                                            </Border>
+                                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                                <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="15" LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding Detalle}" FontSize="12" TextColor="#75718F" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End">
+                                                <Label Text="{Binding SaldoTexto}" FontAttributes="Bold" FontSize="15" TextColor="#E14D43" HorizontalOptions="End" />
+                                                <Label Text="{Binding EstadoTexto}" FontSize="10" TextColor="#75718F" HorizontalOptions="End" TextTransform="Uppercase" CharacterSpacing="1" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

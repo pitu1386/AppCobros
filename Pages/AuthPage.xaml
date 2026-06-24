@@ -1,0 +1,16 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AppCobros.Pages.AuthPage"
+             BackgroundColor="#221C44"
+             Shell.NavBarIsVisible="False"
+             NavigationPage.HasNavigationBar="False">
+
+    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
+        <Label Text="🔒" FontSize="64" HorizontalOptions="Center" />
+        <Label Text="Aplicación Bloqueada" TextColor="White" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
+        <Label Text="Usá tu huella o FaceID para acceder a los datos." TextColor="#DEDCEE" FontSize="14" HorizontalOptions="Center" HorizontalTextAlignment="Center" Margin="0,0,0,20" />
+        
+        <Button x:Name="UnlockBtn" Text="Desbloquear" BackgroundColor="#0FA36B" TextColor="White" CornerRadius="10" WidthRequest="200" HeightRequest="50" Clicked="UnlockBtn_Clicked" />
+    </VerticalStackLayout>
+
+</ContentPage>

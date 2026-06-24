@@ -1,0 +1,50 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:AppCobros.PageModels"
+             x:Class="AppCobros.Pages.ClientesPage"
+             Title="{Binding Title}"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Search bar -->
+        <Border Grid.Row="0" Margin="14" BackgroundColor="White" Stroke="#DEDCEE" StrokeShape="RoundRectangle 9">
+            <SearchBar Placeholder="Buscar cliente…" Text="{Binding SearchText}" />
+        </Border>
+
+        <!-- Lista -->
+        <CollectionView Grid.Row="1" ItemsSource="{Binding GruposDeClientes}" IsGrouped="True">
+            <CollectionView.GroupHeaderTemplate>
+                <DataTemplate x:DataType="vm:ClientGroupViewModel">
+                    <Grid Padding="14,10,14,5">
+                        <VerticalStackLayout>
+                            <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="13" TextColor="#3A3370" TextTransform="Uppercase" CharacterSpacing="0.6" />
+                            <Label Text="{Binding Descripcion}" FontSize="12" TextColor="#75718F" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.GroupHeaderTemplate>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ClientItemViewModel">
+                    <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="12" Margin="14,4,14,5">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ClientesViewModel}}, Path=GoToClientCommand}" CommandParameter="{Binding Client.Id}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="10">
+                            <Border Grid.Column="0" BackgroundColor="#FBE5E2" StrokeThickness="0" StrokeShape="RoundRectangle 9" WidthRequest="40" HeightRequest="40">
+                                <Label Text="{Binding Iniciales}" TextColor="#E14D43" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="15" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Detalle}" FontSize="12" TextColor="#75718F" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End">
+                                <Label Text="{Binding SaldoTexto}" FontAttributes="Bold" FontSize="15" TextColor="#E14D43" HorizontalOptions="End" />
+                                <Label Text="{Binding EstadoTexto}" FontSize="10" TextColor="#75718F" HorizontalOptions="End" TextTransform="Uppercase" CharacterSpacing="1" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>
