@@ -19,6 +19,7 @@ public partial class ClienteDetalleViewModel : BaseViewModel
     private int _clientId;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ClienteActivo))]
     private Client? _client;
 
     [ObservableProperty]
@@ -40,7 +41,12 @@ public partial class ClienteDetalleViewModel : BaseViewModel
     private ObservableCollection<Movimiento> _movimientos = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TienePendientes))]
     private ObservableCollection<Movimiento> _pendientes = new();
+
+    public bool TienePendientes => Pendientes.Count > 0;
+
+    public bool ClienteActivo => Client != null && !Client.Archivado;
 
     public ClienteDetalleViewModel(IDataService dataService, IWhatsAppService whatsAppService, IReceiptService receiptService)
     {
@@ -93,25 +99,36 @@ public partial class ClienteDetalleViewModel : BaseViewModel
     {
         if (Client == null || _data == null) return;
         
-        string result = await Shell.Current.DisplayPromptAsync("Registrar cobro", $"Monto sugerido: {CobrosHelper.FormatMoney(TotalExigible > 0 ? TotalExigible : Math.Max(Saldo, 0))}", keyboard: Keyboard.Numeric);
-        
-        if (double.TryParse(result, out double monto) && monto > 0)
+        var pendientes = CobrosHelper.PendientesDe(Client);
+        var page = new RegistrarCobroPage(TotalExigible > 0 ? TotalExigible : Math.Max(Saldo, 0), pendientes);
+        await Shell.Current.Navigation.PushModalAsync(page);
+        var result = await page.Result;
+
+        if (result != null)
         {
+            double monto = result.Monto;
             var pago = new Movimiento
             {
                 Id = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 Tipo = "pago",
-                Fecha = CobrosHelper.HoyISO(),
-                Concepto = "Pago recibido",
-                Monto = monto
+                Fecha = result.Fecha.ToString("yyyy-MM-dd"),
+                Concepto = string.IsNullOrEmpty(result.Concepto) ? "Pago recibido" : $"Pago recibido — {result.Concepto}",
+                Monto = monto,
+                CotizacionEuro = _data.Config.CotizacionEuro > 0 ? _data.Config.CotizacionEuro : null
             };
             
             Client.Movimientos.Add(pago);
             await _dataService.SaveDataAsync(_data);
             await LoadDataAsync();
 
-            bool sendReceipt = await Shell.Current.DisplayAlertAsync("Recibo Generado", "¿Querés enviarle el comprobante de pago por WhatsApp al cliente?", "Sí, enviar", "No, solo registrar");
-            if (sendReceipt)
+            const string opEnviarRecibo = "📄 Enviar recibo (imagen)";
+            const string opEnviarMensaje = "💬 Enviar mensaje de WhatsApp";
+            const string opNoEnviar = "No enviar nada";
+
+            string opcion = await Shell.Current.DisplayActionSheetAsync(
+                "Pago registrado. ¿Avisamos al cliente?", opNoEnviar, null, opEnviarRecibo, opEnviarMensaje);
+
+            if (opcion == opEnviarRecibo)
             {
                 IsBusy = true;
                 try
@@ -132,17 +149,18 @@ public partial class ClienteDetalleViewModel : BaseViewModel
                     IsBusy = false;
                 }
             }
-            else
+            else if (opcion == opEnviarMensaje)
             {
                 string msg = _data.Config.Plantilla
                     .Replace("{nombre}", Client.Nombre)
                     .Replace("{pago}", CobrosHelper.FormatMoney(monto))
-                    .Replace("{fecha}", DateTime.Now.ToString("dd/MM/yy"))
+                    .Replace("{fecha}", result.Fecha.ToString("dd/MM/yy"))
                     .Replace("{saldo}", CobrosHelper.FormatMoney(Math.Max(0, Saldo - monto)))
                     .Replace("{detalle}", "Gracias por su pago.");
 
                 await _whatsAppService.SendMessageAsync(Client.Telefono, msg);
             }
+            // Cualquier otra opción (incluido "No enviar nada" o cerrar el diálogo) no envía nada.
         }
     }
 
@@ -175,23 +193,85 @@ public partial class ClienteDetalleViewModel : BaseViewModel
     {
         if (Client == null || _data == null) return;
 
-        string concepto = await Shell.Current.DisplayPromptAsync("Cargo manual", "Concepto (ej: Ajuste, Instalación)");
-        if (string.IsNullOrWhiteSpace(concepto)) return;
+        var page = new CargoManualPage();
+        await Shell.Current.Navigation.PushModalAsync(page);
+        var result = await page.Result;
+        if (result == null) return;
 
-        string montoStr = await Shell.Current.DisplayPromptAsync("Monto", "Ingrese el monto del cargo", keyboard: Keyboard.Numeric);
-        if (double.TryParse(montoStr, out double monto) && monto > 0)
+        string? mesKey = result.EsCuotaMensual ? CobrosHelper.MesKey(result.Fecha) : null;
+
+        Client.Movimientos.Add(new Movimiento
         {
-            Client.Movimientos.Add(new Movimiento
-            {
-                Id = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                Tipo = "cargo",
-                Fecha = CobrosHelper.HoyISO(),
-                Concepto = concepto,
-                Monto = monto
-            });
-            await _dataService.SaveDataAsync(_data);
-            await LoadDataAsync();
+            Id = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            Tipo = "cargo",
+            Fecha = result.Fecha.ToString("yyyy-MM-dd"),
+            Mes = mesKey,
+            Concepto = result.Concepto,
+            Monto = result.Monto
+        });
+
+        if (mesKey != null && !Client.Meses.Contains(mesKey))
+        {
+            Client.Meses.Add(mesKey);
         }
+
+        await _dataService.SaveDataAsync(_data);
+        await LoadDataAsync();
+    }
+
+    [RelayCommand]
+    private async Task EditarClienteAsync()
+    {
+        if (Client == null) return;
+        await Shell.Current.GoToAsync($"{nameof(ClienteFormPage)}?ClientId={Client.Id}");
+    }
+
+    [RelayCommand]
+    private async Task ArchivarClienteAsync()
+    {
+        if (Client == null || _data == null) return;
+
+        bool confirm = await Shell.Current.DisplayAlertAsync(
+            "Archivar cliente",
+            "El cliente se va a ocultar de las listas activas y de los reclamos, pero se conserva todo su historial de pagos y cargos. Pod\u00e9s reactivarlo cuando quieras desde el grupo \u00abArchivados\u00bb.",
+            "Archivar", "Cancelar");
+        if (!confirm) return;
+
+        Client.Archivado = true;
+        await _dataService.SaveDataAsync(_data);
+        await LoadDataAsync();
+    }
+
+    [RelayCommand]
+    private async Task ReactivarClienteAsync()
+    {
+        if (Client == null || _data == null) return;
+
+        Client.Archivado = false;
+        await _dataService.SaveDataAsync(_data);
+        await LoadDataAsync();
+    }
+
+    [RelayCommand]
+    private async Task BorrarClienteAsync()
+    {
+        if (Client == null || _data == null) return;
+
+        if (!Client.Archivado)
+        {
+            await Shell.Current.DisplayAlertAsync("Archiv\u00e1 primero", "Para eliminar un cliente definitivamente primero ten\u00e9s que archivarlo. As\u00ed evitamos borrar historial por error.", "OK");
+            return;
+        }
+
+        bool confirm = await Shell.Current.DisplayAlertAsync(
+            "Eliminar definitivamente",
+            "\u00bfEliminar este cliente y todo su historial para siempre? Esta acci\u00f3n no se puede deshacer.",
+            "Eliminar", "Cancelar");
+        if (!confirm) return;
+
+        _data.Clients.Remove(Client);
+        await _dataService.SaveDataAsync(_data);
+        await Shell.Current.GoToAsync("..");
     }
 
     [RelayCommand]

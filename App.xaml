@@ -8,7 +8,6 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
-                <ResourceDictionary Source="Resources/Styles/AppStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Dark Mode Color Tokens -->
@@ -29,6 +28,97 @@
 
             <Color x:Key="EntryBackgroundLight">#F4F3FB</Color>
             <Color x:Key="EntryBackgroundDark">#1A172C</Color>
+
+            <Color x:Key="AccentAmber">#FFB547</Color>
+            <Color x:Key="AccentGreen">#0FA36B</Color>
+            <Color x:Key="AccentWhatsApp">#1FAF59</Color>
+            <Color x:Key="AccentRed">#E14D43</Color>
+
+            <!-- Tarjeta estándar: se adapta a claro/oscuro -->
+            <Style x:Key="Card" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource CardBackgroundLight}, Dark={StaticResource CardBackgroundDark}}" />
+                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource CardStrokeLight}, Dark={StaticResource CardStrokeDark}}" />
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+                <Setter Property="Padding" Value="14" />
+            </Style>
+
+            <!-- Título de sección en mayúsculas dentro de una card -->
+            <Style x:Key="SectionTitle" TargetType="Label">
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="CharacterSpacing" Value="1.6" />
+            </Style>
+
+            <!-- Etiqueta de campo de formulario -->
+            <Style x:Key="FieldLabel" TargetType="Label">
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontAttributes" Value="Bold" />
+            </Style>
+
+            <!-- Texto de ayuda chiquito -->
+            <Style x:Key="Hint" TargetType="Label">
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                <Setter Property="FontSize" Value="11" />
+            </Style>
+
+            <!-- Botones -->
+            <Style x:Key="BtnPrimary" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#221C44, Dark=#3A3370}" />
+                <Setter Property="TextColor" Value="#F5F3FF" />
+                <Setter Property="CornerRadius" Value="10" />
+            </Style>
+
+            <Style x:Key="BtnSuccess" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{StaticResource AccentGreen}" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="CornerRadius" Value="10" />
+            </Style>
+
+            <Style x:Key="BtnWhatsApp" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{StaticResource AccentWhatsApp}" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="CornerRadius" Value="10" />
+            </Style>
+
+            <Style x:Key="BtnDanger" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FBE5E2, Dark=#3D2230}" />
+                <Setter Property="TextColor" Value="{StaticResource AccentRed}" />
+                <Setter Property="CornerRadius" Value="10" />
+            </Style>
+
+            <Style x:Key="BtnGhost" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" />
+                <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource CardStrokeLight}, Dark={StaticResource CardStrokeDark}}" />
+                <Setter Property="BorderWidth" Value="1.5" />
+                <Setter Property="CornerRadius" Value="10" />
+            </Style>
+
+            <!-- Campos de entrada: mismos colores en toda la app -->
+            <Style TargetType="Entry">
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource EntryBackgroundLight}, Dark={StaticResource EntryBackgroundDark}}" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+            </Style>
+
+            <Style TargetType="Editor">
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource EntryBackgroundLight}, Dark={StaticResource EntryBackgroundDark}}" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+            </Style>
+
+            <Style TargetType="Picker">
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource EntryBackgroundLight}, Dark={StaticResource EntryBackgroundDark}}" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+            </Style>
+
+            <Style TargetType="DatePicker">
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource EntryBackgroundLight}, Dark={StaticResource EntryBackgroundDark}}" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+            </Style>
 
         </ResourceDictionary>
     </Application.Resources>

@@ -9,6 +9,9 @@ namespace AppCobros
         public AppShell()
         {
             InitializeComponent();
+            Routing.RegisterRoute(nameof(ClienteDetallePage), typeof(ClienteDetallePage));
+            Routing.RegisterRoute(nameof(ClienteFormPage), typeof(ClienteFormPage));
+            Routing.RegisterRoute(nameof(ReclamarMasivoPage), typeof(ReclamarMasivoPage));
         }
 
         public static async Task DisplaySnackbarAsync(string message)

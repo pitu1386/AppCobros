@@ -1,0 +1,75 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:AppCobros.PageModels"
+             x:Class="AppCobros.Pages.ClienteFormPage"
+             Title="{Binding Title}"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <ScrollView Padding="14">
+        <VerticalStackLayout Spacing="12">
+
+            <!-- Nombre -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="NOMBRE DEL CLIENTE" Style="{StaticResource SectionTitle}" />
+                    <Entry Text="{Binding Nombre}" Placeholder="Ej: Kiosco San Martín" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Teléfono -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="WHATSAPP" Style="{StaticResource SectionTitle}" />
+                    <Entry Text="{Binding Telefono}" Placeholder="Ej: 5493511234567" Keyboard="Telephone" />
+                    <Label Text="Con código de país y área, sin + ni espacios (Argentina: 549…)." Style="{StaticResource Hint}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Grupo -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="GRUPO" Style="{StaticResource SectionTitle}" />
+                    <Picker ItemsSource="{Binding Grupos}"
+                            SelectedItem="{Binding GrupoSeleccionado}"
+                            ItemDisplayBinding="{Binding Nombre}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Anexos -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="ANEXOS CONTRATADOS" Style="{StaticResource SectionTitle}" />
+                    <Entry Text="{Binding Anexos}" Keyboard="Numeric" />
+                    <Label Text="Cada anexo suma precio extra a la cuota. Dejá 0 si no tiene." Style="{StaticResource Hint}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Mes vencido -->
+            <Border Style="{StaticResource Card}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                        <Label Text="Paga a mes vencido" Style="{StaticResource FieldLabel}" FontSize="14" />
+                        <Label Text="La cuota del mes en curso no se reclama ni aparece en los mensajes hasta el mes siguiente."
+                               Style="{StaticResource Hint}" FontSize="12" />
+                    </VerticalStackLayout>
+                    <Switch Grid.Column="1" IsToggled="{Binding MesVencido}" OnColor="{StaticResource AccentGreen}" VerticalOptions="Center" />
+                </Grid>
+            </Border>
+
+            <!-- Cuota resultante -->
+            <Border BackgroundColor="{AppThemeBinding Light=#DDF5EA, Dark=#153828}" Stroke="{AppThemeBinding Light=#BCE8D4, Dark=#1F5138}" StrokeShape="RoundRectangle 10" Padding="12,11">
+                <Label Text="{Binding CuotaLabel}" TextColor="{AppThemeBinding Light=#221C44, Dark=#8FE6BE}" FontSize="13" FontAttributes="Bold" />
+            </Border>
+
+            <!-- Guardar -->
+            <Button Text="Guardar cliente" Style="{StaticResource BtnPrimary}" Command="{Binding GuardarCommand}" />
+
+            <!-- Borrar (solo en edición) -->
+            <Button Text="Eliminar cliente" Style="{StaticResource BtnDanger}"
+                    Command="{Binding BorrarCommand}"
+                    IsVisible="{Binding CanDelete}"
+                    Margin="0,0,0,20" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

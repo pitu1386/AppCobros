@@ -23,6 +23,10 @@ public class Client
     [JsonPropertyName("mesVencido")]
     public bool MesVencido { get; set; }
 
+    // Cliente dado de baja: se oculta de las listas activas pero conserva todo su historial
+    [JsonPropertyName("archivado")]
+    public bool Archivado { get; set; }
+
     [JsonPropertyName("movimientos")]
     public ObservableCollection<Movimiento> Movimientos { get; set; } = new ObservableCollection<Movimiento>();
 

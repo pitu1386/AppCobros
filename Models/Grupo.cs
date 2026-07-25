@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 namespace AppCobros.Models;
@@ -12,4 +13,8 @@ public class Grupo
 
     [JsonPropertyName("cuota")]
     public double Cuota { get; set; }
+
+    // Registro de cambios de precio, con fecha, para poder auditar aumentos
+    [JsonPropertyName("historialCuota")]
+    public ObservableCollection<CuotaHistorialEntry> HistorialCuota { get; set; } = new();
 }

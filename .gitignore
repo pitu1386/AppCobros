@@ -360,4 +360,10 @@ MigrationBackup/
 .ionide/
 
 # Fody - auto-generated XML schema
+
+# Android signing keystore — NO subir a control de versiones
+*.keystore
+*.jks
 FodyWeavers.xsd
+# Local Claude CLI config
+.claude/

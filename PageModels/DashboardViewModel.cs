@@ -28,6 +28,18 @@ public partial class DashboardViewModel : BaseViewModel
     [ObservableProperty]
     private string _mesActualLabel = string.Empty;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HayCotizacion))]
+    private double _cotizacionEuro;
+
+    [ObservableProperty]
+    private string _cobradoEurosTexto = string.Empty;
+
+    [ObservableProperty]
+    private string _cotizacionDetalle = string.Empty;
+
+    public bool HayCotizacion => CotizacionEuro > 0;
+
     public ObservableCollection<ClientItemViewModel> TopDeudores { get; private set; } = new();
     public ObservableCollection<HistorialMesViewModel> HistorialCobros { get; private set; } = new();
 
@@ -44,6 +56,12 @@ public partial class DashboardViewModel : BaseViewModel
         IsBusy = true;
         _data = await _dataService.LoadDataAsync();
 
+        var aviso = _dataService.TomarAvisoDatosDanados();
+        if (aviso != null)
+        {
+            await Shell.Current.DisplayAlertAsync("Atención", aviso, "OK");
+        }
+
         var date = DateTime.Now;
         var mesKey = CobrosHelper.MesKey(date);
         MesActualLabel = CobrosHelper.MesLabel(mesKey);
@@ -51,36 +69,46 @@ public partial class DashboardViewModel : BaseViewModel
         double cobradoMes = 0;
         double deudaTotal = 0;
         double proyeccion = 0;
+        double eurosMes = 0;
+        double cotizActual = _data.Config.CotizacionEuro;
 
         TopDeudores.Clear();
         HistorialCobros.Clear();
 
         if (_data.Clients != null)
         {
-            ClientesActivos = _data.Clients.Count;
+            var activos = _data.Clients.Where(c => !c.Archivado).ToList();
+            ClientesActivos = activos.Count;
             var listDeudores = new List<ClientItemViewModel>();
 
-            foreach (var c in _data.Clients)
+            foreach (var c in activos)
             {
                 proyeccion += CobrosHelper.CuotaDe(c, _data.Grupos, _data.Config);
 
                 double exigible = CobrosHelper.TotalDe(CobrosHelper.ExigiblesDe(c, mesKey));
                 deudaTotal += exigible;
 
-                if (c.Movimientos != null)
-                {
-                    foreach (var m in c.Movimientos)
-                    {
-                        if (m.Tipo == "pago" && m.Fecha.StartsWith(mesKey))
-                        {
-                            cobradoMes += m.Monto;
-                        }
-                    }
-                }
-
                 if (exigible > 0)
                 {
                     listDeudores.Add(new ClientItemViewModel(c, _data.Grupos, _data.Config, mesKey));
+                }
+            }
+
+            // El dinero cobrado es histórico: se cuenta aunque el cliente ya esté archivado.
+            foreach (var c in _data.Clients)
+            {
+                if (c.Movimientos == null) continue;
+                foreach (var m in c.Movimientos)
+                {
+                    if (m.Tipo == "pago" && m.Fecha.StartsWith(mesKey))
+                    {
+                        cobradoMes += m.Monto;
+
+                        // Cada pago se convierte con la cotización vigente cuando se registró;
+                        // los pagos viejos sin cotización guardada usan la actual.
+                        double tasa = m.CotizacionEuro ?? cotizActual;
+                        if (tasa > 0) eurosMes += m.Monto / tasa;
+                    }
                 }
             }
 
@@ -104,26 +132,10 @@ public partial class DashboardViewModel : BaseViewModel
                     {
                         totalMes += c.Movimientos
                           .Where(m => m.Tipo == "pago" && m.Fecha.StartsWith(mk))
-                          .Sum(m =>
-                          {
-                              // *** CAMBIO CRÍTICO AQUÍ ***
-                              if (double.TryParse(m.Monto.ToString(), out double montoConvertido))
-                              {
-                                  return montoConvertido;
-                              }
-                              return 0.0; // Retorna 0 si la conversión falla
-                          });
+                          .Sum(m => m.Monto);
                     }
                 }
-                try
-                {
-                    HistorialCobros.Add(new HistorialMesViewModel(label, totalMes));
-
-                }
-                catch (Exception ex)
-                {
-                    var mes = ex.Message;
-                }
+                HistorialCobros.Add(new HistorialMesViewModel(label, totalMes));
             }
 
             // Normalize heights for UI simple bars
@@ -141,6 +153,14 @@ public partial class DashboardViewModel : BaseViewModel
         CobranzaMesActual = cobradoMes;
         DeudaTotal = deudaTotal;
         ProyeccionIngresos = proyeccion;
+
+        CotizacionEuro = cotizActual;
+        if (CotizacionEuro > 0)
+        {
+            var culture = new System.Globalization.CultureInfo("es-AR");
+            CobradoEurosTexto = "€ " + eurosMes.ToString("N2", culture);
+            CotizacionDetalle = $"Cotización actual: $ {CotizacionEuro.ToString("N0", culture)} por € (cada pago usa la tasa de su fecha)";
+        }
 
         IsBusy = false;
     }

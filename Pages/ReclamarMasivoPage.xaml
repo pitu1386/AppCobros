@@ -1,0 +1,59 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:AppCobros.PageModels"
+             x:Class="AppCobros.Pages.ReclamarMasivoPage"
+             Title="{Binding Title}"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <ScrollView Padding="14">
+        <VerticalStackLayout Spacing="10">
+
+            <Label Text="Un toque por cliente: se abre WhatsApp con el mensaje personalizado. Los enviados quedan marcados con ✓."
+                   Style="{StaticResource Hint}" FontSize="13" Margin="0,0,0,4" />
+
+            <CollectionView ItemsSource="{Binding Clientes}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ReclamarItemViewModel">
+                        <Border Style="{StaticResource Card}" Padding="12" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                                    <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="15"
+                                           LineBreakMode="TailTruncation" />
+                                    <Label Style="{StaticResource Hint}" FontSize="12" Text="{Binding DeudaTexto}" />
+                                    <Label FontSize="12" TextColor="{StaticResource AccentGreen}" Text="✓ avisado hoy"
+                                           IsVisible="{Binding AvisadoHoy}" />
+                                </VerticalStackLayout>
+
+                                <!-- Estado: sin teléfono -->
+                                <Label Grid.Column="1" Text="sin teléfono" Style="{StaticResource Hint}" FontSize="12"
+                                       VerticalOptions="Center"
+                                       IsVisible="{Binding SinTelefono}" />
+
+                                <!-- Botón enviar/reenviar -->
+                                <Button Grid.Column="1" CornerRadius="8" Padding="14,0" HeightRequest="38"
+                                        Command="{Binding EnviarCommand}"
+                                        IsVisible="{Binding TieneTelefono}"
+                                        VerticalOptions="Center">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding AvisadoHoy}" Value="False">
+                                            <Setter Property="Text" Value="Enviar" />
+                                            <Setter Property="BackgroundColor" Value="{StaticResource AccentWhatsApp}" />
+                                            <Setter Property="TextColor" Value="White" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Button" Binding="{Binding AvisadoHoy}" Value="True">
+                                            <Setter Property="Text" Value="Reenviar" />
+                                            <Setter Property="BackgroundColor" Value="Transparent" />
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

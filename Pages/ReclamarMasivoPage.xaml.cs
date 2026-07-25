@@ -2,11 +2,11 @@ using AppCobros.PageModels;
 
 namespace AppCobros.Pages;
 
-public partial class ClienteDetallePage : ContentPage
+public partial class ReclamarMasivoPage : ContentPage
 {
-    private readonly ClienteDetalleViewModel _viewModel;
+    private readonly ReclamarMasivoViewModel _viewModel;
 
-    public ClienteDetallePage(ClienteDetalleViewModel viewModel)
+    public ReclamarMasivoPage(ReclamarMasivoViewModel viewModel)
     {
         InitializeComponent();
         BindingContext = _viewModel = viewModel;
@@ -15,6 +15,6 @@ public partial class ClienteDetallePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadDataAsync();
+        await _viewModel.LoadAsync();
     }
 }

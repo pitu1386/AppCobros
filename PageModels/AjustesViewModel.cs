@@ -18,19 +18,46 @@ public partial class AjustesViewModel : BaseViewModel
     [ObservableProperty]
     private ObservableCollection<Grupo> _grupos = new();
 
+    // Cuota de cada grupo tal cual estaba al cargar, para detectar cambios al guardar
+    private Dictionary<int, double> _cuotasOriginales = new();
+
+    [ObservableProperty]
+    private int _temaSeleccionado;
+
+    partial void OnTemaSeleccionadoChanged(int value)
+    {
+        Application.Current!.UserAppTheme = value switch
+        {
+            1 => AppTheme.Light,
+            2 => AppTheme.Dark,
+            _ => AppTheme.Unspecified
+        };
+        Preferences.Default.Set("tema", value);
+    }
+
     public AjustesViewModel(IDataService dataService)
     {
         _dataService = dataService;
         Title = "Ajustes";
     }
 
+    [ObservableProperty]
+    private string _ultimoBackupTexto = string.Empty;
+
     public async Task LoadDataAsync()
     {
         IsBusy = true;
         _data = await _dataService.LoadDataAsync();
-        
+
         Config = _data.Config;
         Grupos = new ObservableCollection<Grupo>(_data.Grupos);
+        _cuotasOriginales = _data.Grupos.ToDictionary(g => g.Id, g => g.Cuota);
+        TemaSeleccionado = Preferences.Default.Get("tema", 0);
+
+        var ultimo = Preferences.Default.Get("ultimo_backup_auto", string.Empty);
+        UltimoBackupTexto = string.IsNullOrEmpty(ultimo)
+            ? "Todavía no hay copia automática."
+            : $"Última copia automática: {ultimo} (se guarda una por día en el dispositivo).";
 
         IsBusy = false;
     }
@@ -40,6 +67,7 @@ public partial class AjustesViewModel : BaseViewModel
     {
         if (_data == null) return;
         Grupos.Add(new Grupo { Id = _data.NextGid, Nombre = "Nuevo grupo", Cuota = 0 });
+        _cuotasOriginales[_data.NextGid] = 0;
         _data.NextGid++;
     }
 
@@ -70,11 +98,42 @@ public partial class AjustesViewModel : BaseViewModel
     {
         if (_data == null) return;
         IsBusy = true;
+
+        var hoy = CobrosHelper.HoyISO();
+        foreach (var g in Grupos)
+        {
+            if (_cuotasOriginales.TryGetValue(g.Id, out var anterior) && Math.Abs(anterior - g.Cuota) > 0.001)
+            {
+                g.HistorialCuota.Add(new CuotaHistorialEntry { Fecha = hoy, Cuota = g.Cuota });
+            }
+        }
+
         _data.Config = Config;
         _data.Grupos = new ObservableCollection<Grupo>(Grupos);
         await _dataService.SaveDataAsync(_data);
+        _cuotasOriginales = Grupos.ToDictionary(g => g.Id, g => g.Cuota);
+
         IsBusy = false;
         await Shell.Current.DisplayAlertAsync("Éxito", "Ajustes guardados correctamente.", "OK");
+    }
+
+    [RelayCommand]
+    private async Task VerHistorialCuotaAsync(Grupo g)
+    {
+        if (g == null) return;
+
+        if (g.HistorialCuota.Count == 0)
+        {
+            await Shell.Current.DisplayAlertAsync($"Historial · {g.Nombre}",
+                "Todavía no hay cambios de cuota registrados para este grupo. Se empieza a registrar a partir de ahora, cada vez que cambies el precio y guardes ajustes.", "OK");
+            return;
+        }
+
+        var lineas = g.HistorialCuota
+            .OrderByDescending(h => h.Fecha)
+            .Select(h => $"{DateTime.Parse(h.Fecha):dd/MM/yyyy}: {CobrosHelper.FormatMoney(h.Cuota)}");
+
+        await Shell.Current.DisplayAlertAsync($"Historial · {g.Nombre}", string.Join("\n", lineas), "OK");
     }
 
     [RelayCommand]

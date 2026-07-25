@@ -55,10 +55,11 @@ public partial class InicioViewModel : BaseViewModel
 
         if (_data.Clients != null)
         {
-            var sinFacturar = _data.Clients.Where(c => !CobrosHelper.FacturadoMes(c, mesKey)).ToList();
+            var activos = _data.Clients.Where(c => !c.Archivado).ToList();
+            var sinFacturar = activos.Where(c => !CobrosHelper.FacturadoMes(c, mesKey)).ToList();
             ClientesSinFacturarCount = sinFacturar.Count;
 
-            foreach (var c in _data.Clients)
+            foreach (var c in activos)
             {
                 double s = CobrosHelper.SaldoDe(c);
                 if (s > 0) pendiente += s;
@@ -98,12 +99,18 @@ public partial class InicioViewModel : BaseViewModel
     }
 
     [RelayCommand]
+    private async Task GoToClientAsync(int clientId)
+    {
+        await Shell.Current.GoToAsync($"{nameof(ClienteDetallePage)}?ClientId={clientId}");
+    }
+
+    [RelayCommand]
     private async Task CargarCuotasDelMesAsync()
     {
         if (_data == null) return;
         var mesKey = CobrosHelper.MesKey(DateTime.Now);
-        var sinFacturar = _data.Clients.Where(c => !CobrosHelper.FacturadoMes(c, mesKey)).ToList();
-        
+        var sinFacturar = _data.Clients.Where(c => !c.Archivado && !CobrosHelper.FacturadoMes(c, mesKey)).ToList();
+
         if (sinFacturar.Count == 0) return;
 
         double total = sinFacturar.Sum(c => CobrosHelper.CuotaDe(c, _data.Grupos, _data.Config));
@@ -136,20 +143,15 @@ public partial class InicioViewModel : BaseViewModel
     {
         if (_data == null) return;
         var mesKey = CobrosHelper.MesKey(DateTime.Now);
-        var clientesAReclamar = _data.Clients
-            .Select(c => new { Client = c, TotalExigible = CobrosHelper.TotalDe(CobrosHelper.ExigiblesDe(c, mesKey)) })
-            .Where(x => x.TotalExigible > 0)
-            .ToList();
+        bool hayDeuda = _data.Clients.Any(c => !c.Archivado && CobrosHelper.TotalDe(CobrosHelper.ExigiblesDe(c, mesKey)) > 0);
 
-        if (clientesAReclamar.Count == 0)
+        if (!hayDeuda)
         {
             await Shell.Current.DisplayAlertAsync("Sin deudas", "No hay clientes con deuda exigible.", "OK");
             return;
         }
 
-        await Shell.Current.DisplayAlertAsync("Aviso", "Esta función debe implementarse con una página o popup de envío masivo.", "OK");
-        // Para simplificar, podríamos simplemente avisar que se debe hacer desde el detalle de cada cliente, 
-        // o implementar la hoja de "Reclamar deudas" como en React.
+        await Shell.Current.GoToAsync(nameof(ReclamarMasivoPage));
     }
 }
 
@@ -166,6 +168,7 @@ public class ClientItemViewModel
     public bool TieneDeuda => Saldo > 0;
     public bool Exigible => _exig > 0;
     public bool MesVencido => Client.MesVencido;
+    public bool EsArchivado => Client.Archivado;
 
     private double _exig;
 

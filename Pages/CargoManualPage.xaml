@@ -1,0 +1,37 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AppCobros.Pages.CargoManualPage"
+             Title="Cargo manual"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <ScrollView Padding="14">
+        <VerticalStackLayout Spacing="12">
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="NUEVO CARGO" Style="{StaticResource SectionTitle}" />
+
+                    <Label Text="Concepto" Style="{StaticResource FieldLabel}" />
+                    <Entry x:Name="ConceptoEntry" Placeholder="Ej: Ajuste, Instalación, Cuota adelantada" />
+
+                    <Label Text="Monto" Style="{StaticResource FieldLabel}" />
+                    <Entry x:Name="MontoEntry" Placeholder="0" Keyboard="Numeric" />
+
+                    <Label Text="Fecha del cargo" Style="{StaticResource FieldLabel}" />
+                    <DatePicker x:Name="FechaPicker" Format="dd/MM/yyyy" />
+                    <Label Text="Podés elegir una fecha futura, por ejemplo para adelantar la cuota del mes que viene." Style="{StaticResource Hint}" />
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Label Grid.Column="0" Text="Contar como cuota mensual del mes de la fecha" Style="{StaticResource FieldLabel}" VerticalOptions="Center" />
+                        <Switch Grid.Column="1" x:Name="EsCuotaSwitch" OnColor="{StaticResource AccentGreen}" />
+                    </Grid>
+                    <Label Text="Si lo activás, ese mes queda marcado como facturado y no se vuelve a cargar con «Cargar cuotas del mes a todos»." Style="{StaticResource Hint}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button Text="Guardar cargo" Style="{StaticResource BtnSuccess}" Clicked="Guardar_Clicked" />
+            <Button Text="Cancelar" Style="{StaticResource BtnGhost}" Clicked="Cancelar_Clicked" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

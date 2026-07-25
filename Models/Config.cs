@@ -18,4 +18,7 @@ public class Config
 
     [JsonPropertyName("orden")]
     public string Orden { get; set; } = "deuda";
+
+    [JsonPropertyName("cotizacionEuro")]
+    public double CotizacionEuro { get; set; } = 0; // Pesos por 1 euro. 0 = no configurada, oculta la card.
 }

@@ -1,0 +1,32 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AppCobros.Pages.RegistrarCobroPage"
+             Title="Registrar cobro"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <ScrollView Padding="14">
+        <VerticalStackLayout Spacing="12">
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="NUEVO COBRO" Style="{StaticResource SectionTitle}" />
+
+                    <Label x:Name="CorrespondeALabel" Text="¿A qué corresponde este pago?" Style="{StaticResource FieldLabel}" IsVisible="False" />
+                    <Picker x:Name="PendientePicker" IsVisible="False" SelectedIndexChanged="PendientePicker_SelectedIndexChanged" />
+
+                    <Label Text="Monto recibido" Style="{StaticResource FieldLabel}" />
+                    <Entry x:Name="MontoEntry" Placeholder="0" Keyboard="Numeric" />
+                    <Label x:Name="SugeridoLabel" Style="{StaticResource Hint}" />
+
+                    <Label Text="Fecha del pago" Style="{StaticResource FieldLabel}" />
+                    <DatePicker x:Name="FechaPicker" Format="dd/MM/yyyy" />
+                    <Label Text="Si te pagaron otro día, elegí esa fecha para que el resumen mensual quede correcto." Style="{StaticResource Hint}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button Text="💵 Registrar cobro" Style="{StaticResource BtnSuccess}" Clicked="Guardar_Clicked" />
+            <Button Text="Cancelar" Style="{StaticResource BtnGhost}" Clicked="Cancelar_Clicked" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

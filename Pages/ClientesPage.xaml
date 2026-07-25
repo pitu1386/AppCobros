@@ -5,41 +5,89 @@
              Title="{Binding Title}"
              BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
 
-    <Grid RowDefinitions="Auto, *">
+    <Grid RowDefinitions="Auto, Auto, *">
         <!-- Search bar -->
-        <Border Grid.Row="0" Margin="14" BackgroundColor="White" Stroke="#DEDCEE" StrokeShape="RoundRectangle 9">
-            <SearchBar Placeholder="Buscar cliente…" Text="{Binding SearchText}" />
+        <Border Grid.Row="0" Margin="14" Style="{StaticResource Card}" Padding="0" StrokeShape="RoundRectangle 9">
+            <SearchBar Placeholder="Buscar cliente…" Text="{Binding SearchText}"
+                       TextColor="{AppThemeBinding Light=#221C44, Dark=#F5F3FF}"
+                       PlaceholderColor="{AppThemeBinding Light=#75718F, Dark=#8D88B5}" />
         </Border>
 
+        <!-- Orden + Filtro + Nuevo cliente -->
+        <Grid Grid.Row="1" Margin="14,0,14,8" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+            <Border Grid.Column="0" Style="{StaticResource Card}" StrokeShape="RoundRectangle 9" Padding="12,8">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ToggleSortCommand}" />
+                </Border.GestureRecognizers>
+                <HorizontalStackLayout Spacing="5">
+                    <Label Text="Orden:" Style="{StaticResource Hint}" FontSize="12" VerticalOptions="Center" />
+                    <Label Text="{Binding OrdenLabel}" FontSize="12" TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" FontAttributes="Bold" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource Card}" StrokeShape="RoundRectangle 9" Padding="12,8">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ToggleFiltroEstadoCommand}" />
+                </Border.GestureRecognizers>
+                <HorizontalStackLayout Spacing="5">
+                    <Label Text="Estado:" Style="{StaticResource Hint}" FontSize="12" VerticalOptions="Center" />
+                    <Label Text="{Binding FiltroEstadoLabel}" FontSize="12" TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" FontAttributes="Bold" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
+            <Button Grid.Column="3" Text="＋ Nuevo cliente" Style="{StaticResource BtnSuccess}" FontSize="12" Padding="12,0" HeightRequest="36" CornerRadius="9"
+                    Command="{Binding NuevoClienteCommand}" />
+        </Grid>
+
         <!-- Lista -->
-        <CollectionView Grid.Row="1" ItemsSource="{Binding GruposDeClientes}" IsGrouped="True">
+        <CollectionView Grid.Row="2" ItemsSource="{Binding GruposDeClientes}" IsGrouped="True">
             <CollectionView.GroupHeaderTemplate>
                 <DataTemplate x:DataType="vm:ClientGroupViewModel">
-                    <Grid Padding="14,10,14,5">
-                        <VerticalStackLayout>
-                            <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="13" TextColor="#3A3370" TextTransform="Uppercase" CharacterSpacing="0.6" />
-                            <Label Text="{Binding Descripcion}" FontSize="12" TextColor="#75718F" />
+                    <Grid ColumnDefinitions="*,Auto" Padding="14,10,14,5">
+                        <VerticalStackLayout Grid.Column="0">
+                            <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="13" TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" TextTransform="Uppercase" CharacterSpacing="0.6" />
+                            <Label Text="{Binding Descripcion}" Style="{StaticResource Hint}" FontSize="12" />
                         </VerticalStackLayout>
+                        <Border Grid.Column="1" BackgroundColor="Transparent" Stroke="{AppThemeBinding Light=#DEDCEE, Dark=#3A3370}" StrokeShape="RoundRectangle 8"
+                                Padding="10,6" VerticalOptions="Center"
+                                IsVisible="{Binding IsRealGroup}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ClientesViewModel}}, Path=NuevoClienteEnGrupoCommand}"
+                                    CommandParameter="{Binding GrupoId}" />
+                            </Border.GestureRecognizers>
+                            <Label Text="＋ Agregar" FontSize="12" FontAttributes="Bold" TextColor="{StaticResource AccentGreen}" />
+                        </Border>
                     </Grid>
                 </DataTemplate>
             </CollectionView.GroupHeaderTemplate>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:ClientItemViewModel">
-                    <Border BackgroundColor="#FFFFFF" Stroke="#DEDCEE" StrokeShape="RoundRectangle 12" Padding="12" Margin="14,4,14,5">
+                    <Border Style="{StaticResource Card}" Padding="12" Margin="14,4,14,5">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ClientesViewModel}}, Path=GoToClientCommand}" CommandParameter="{Binding Client.Id}" />
                         </Border.GestureRecognizers>
-                        <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="10">
-                            <Border Grid.Column="0" BackgroundColor="#FBE5E2" StrokeThickness="0" StrokeShape="RoundRectangle 9" WidthRequest="40" HeightRequest="40">
-                                <Label Text="{Binding Iniciales}" TextColor="#E14D43" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold" />
+                        <Grid ColumnDefinitions="44,*,Auto" ColumnSpacing="10">
+                            <Border Grid.Column="0" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                    WidthRequest="44" HeightRequest="44" VerticalOptions="Center"
+                                    BackgroundColor="{AppThemeBinding Light=#221C44, Dark=#3A3370}">
+                                <Label Text="{Binding Iniciales}" TextColor="White"
+                                       HorizontalOptions="Fill" VerticalOptions="Fill"
+                                       HorizontalTextAlignment="Center" VerticalTextAlignment="Center"
+                                       FontAttributes="Bold" FontSize="12" />
                             </Border>
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
                                 <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="15" LineBreakMode="TailTruncation" />
-                                <Label Text="{Binding Detalle}" FontSize="12" TextColor="#75718F" />
+                                <Label Text="{Binding Detalle}" Style="{StaticResource Hint}" FontSize="12" />
+                                <Label Text="📦 Archivado" FontSize="10" TextColor="{StaticResource AccentAmber}" IsVisible="{Binding EsArchivado}" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End">
-                                <Label Text="{Binding SaldoTexto}" FontAttributes="Bold" FontSize="15" TextColor="#E14D43" HorizontalOptions="End" />
-                                <Label Text="{Binding EstadoTexto}" FontSize="10" TextColor="#75718F" HorizontalOptions="End" TextTransform="Uppercase" CharacterSpacing="1" />
+                                <Label Text="{Binding SaldoTexto}" FontAttributes="Bold" FontSize="15" TextColor="{StaticResource AccentRed}" HorizontalOptions="End">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding TieneDeuda}" Value="False">
+                                            <Setter Property="TextColor" Value="{StaticResource AccentGreen}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Label Text="{Binding EstadoTexto}" Style="{StaticResource Hint}" FontSize="10" HorizontalOptions="End" TextTransform="Uppercase" CharacterSpacing="1" />
                             </VerticalStackLayout>
                         </Grid>
                     </Border>

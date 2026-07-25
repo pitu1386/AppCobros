@@ -7,6 +7,8 @@
     Shell.FlyoutBehavior="Disabled"
     Title="AppCobros"
     BackgroundColor="#221C44"
+    TitleColor="White"
+    ForegroundColor="White"
     UnselectedColor="#8D88B5"
     TabBarBackgroundColor="#221C44"
     TabBarUnselectedColor="#8D88B5"
