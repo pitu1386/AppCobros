@@ -1,6 +1,5 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:models="clr-namespace:AppCobros.Models"
              x:Class="AppCobros.Pages.CargoManualPage"
              Title="Cargo manual"
              BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
@@ -8,37 +7,22 @@
     <ScrollView Padding="14">
         <VerticalStackLayout Spacing="12">
 
-            <!-- Conceptos frecuentes cargados desde Ajustes -->
-            <Border Style="{StaticResource Card}" x:Name="ConceptosCard">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="CARGOS FRECUENTES" Style="{StaticResource SectionTitle}" />
-                    <Label Text="Tocá uno para completar el concepto y el monto. Podés editarlos igual antes de guardar." Style="{StaticResource Hint}" />
-
-                    <FlexLayout x:Name="ConceptosLayout" Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Center"
-                                BindableLayout.ItemsSource="{Binding ConceptosRapidos}">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="models:ConceptoCargo">
-                                <Border BackgroundColor="Transparent"
-                                        Stroke="{AppThemeBinding Light=#DEDCEE, Dark=#3A3370}"
-                                        StrokeShape="RoundRectangle 9" Padding="12,8" Margin="0,0,8,8">
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Tapped="Concepto_Tapped" />
-                                    </Border.GestureRecognizers>
-                                    <Label Text="{Binding Etiqueta}" FontSize="12" FontAttributes="Bold"
-                                           TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" />
-                                </Border>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </FlexLayout>
-                </VerticalStackLayout>
-            </Border>
-
             <Border Style="{StaticResource Card}">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="NUEVO CARGO" Style="{StaticResource SectionTitle}" />
 
                     <Label Text="Concepto" Style="{StaticResource FieldLabel}" />
+
+                    <!-- Lista de conceptos configurados en Ajustes -->
+                    <Picker x:Name="ConceptoPicker" Title="Elegí un concepto"
+                            ItemsSource="{Binding OpcionesConcepto}"
+                            SelectedIndexChanged="ConceptoPicker_SelectedIndexChanged" />
+
                     <Entry x:Name="ConceptoEntry" Placeholder="Ej: Ajuste, Instalación, Cuota adelantada" />
+
+                    <Label x:Name="SinConceptosHint"
+                           Text="Podés cargar tus conceptos habituales en Ajustes → Cargos frecuentes para elegirlos de una lista."
+                           Style="{StaticResource Hint}" />
 
                     <Label Text="Monto" Style="{StaticResource FieldLabel}" />
                     <Entry x:Name="MontoEntry" Placeholder="0" Keyboard="Numeric" />
