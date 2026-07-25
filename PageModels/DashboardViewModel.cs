@@ -40,6 +40,38 @@ public partial class DashboardViewModel : BaseViewModel
 
     public bool HayCotizacion => CotizacionEuro > 0;
 
+    // ── Indicadores de gestión ──────────────────────────────────
+
+    [ObservableProperty]
+    private double _cobrabilidad;
+
+    [ObservableProperty]
+    private string _cobrabilidadTexto = string.Empty;
+
+    [ObservableProperty]
+    private string _cobrabilidadDetalle = string.Empty;
+
+    [ObservableProperty]
+    private double _morosidad;
+
+    [ObservableProperty]
+    private string _morosidadTexto = string.Empty;
+
+    [ObservableProperty]
+    private string _morosidadDetalle = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VariacionEsPositiva))]
+    private double _variacionMensual;
+
+    [ObservableProperty]
+    private string _variacionTexto = string.Empty;
+
+    [ObservableProperty]
+    private string _variacionDetalle = string.Empty;
+
+    public bool VariacionEsPositiva => VariacionMensual >= 0;
+
     public ObservableCollection<ClientItemViewModel> TopDeudores { get; private set; } = new();
     public ObservableCollection<HistorialMesViewModel> HistorialCobros { get; private set; } = new();
 
@@ -72,6 +104,12 @@ public partial class DashboardViewModel : BaseViewModel
         double eurosMes = 0;
         double cotizActual = _data.Config.CotizacionEuro;
 
+        // Indicadores de gestión del mes
+        double facturadoMes = 0;
+        double cobradoMesAnterior = 0;
+        int morosos = 0;
+        var mesAnteriorKey = CobrosHelper.MesKey(date.AddMonths(-1));
+
         TopDeudores.Clear();
         HistorialCobros.Clear();
 
@@ -90,6 +128,7 @@ public partial class DashboardViewModel : BaseViewModel
 
                 if (exigible > 0)
                 {
+                    morosos++;
                     listDeudores.Add(new ClientItemViewModel(c, _data.Grupos, _data.Config, mesKey));
                 }
             }
@@ -100,7 +139,17 @@ public partial class DashboardViewModel : BaseViewModel
                 if (c.Movimientos == null) continue;
                 foreach (var m in c.Movimientos)
                 {
-                    if (m.Tipo == "pago" && m.Fecha.StartsWith(mesKey))
+                    if (m.Tipo == "cargo")
+                    {
+                        if (m.Fecha.StartsWith(mesKey)) facturadoMes += m.Monto;
+                        continue;
+                    }
+
+                    if (m.Tipo != "pago") continue;
+
+                    if (m.Fecha.StartsWith(mesAnteriorKey)) cobradoMesAnterior += m.Monto;
+
+                    if (m.Fecha.StartsWith(mesKey))
                     {
                         cobradoMes += m.Monto;
 
@@ -154,6 +203,8 @@ public partial class DashboardViewModel : BaseViewModel
         DeudaTotal = deudaTotal;
         ProyeccionIngresos = proyeccion;
 
+        CalcularIndicadores(cobradoMes, facturadoMes, cobradoMesAnterior, morosos);
+
         CotizacionEuro = cotizActual;
         if (CotizacionEuro > 0)
         {
@@ -163,6 +214,50 @@ public partial class DashboardViewModel : BaseViewModel
         }
 
         IsBusy = false;
+    }
+
+    /// Indicadores del mes: cuánto de lo facturado se cobró, cuántos clientes deben
+    /// y cómo viene la cobranza contra el mes pasado.
+    private void CalcularIndicadores(double cobradoMes, double facturadoMes, double cobradoMesAnterior, int morosos)
+    {
+        if (facturadoMes > 0)
+        {
+            Cobrabilidad = Math.Min(cobradoMes / facturadoMes * 100, 999);
+            CobrabilidadTexto = $"{Cobrabilidad:N0} %";
+            CobrabilidadDetalle = $"{CobrosHelper.FormatMoney(cobradoMes)} de {CobrosHelper.FormatMoney(facturadoMes)} facturados";
+        }
+        else
+        {
+            Cobrabilidad = 0;
+            CobrabilidadTexto = "—";
+            CobrabilidadDetalle = "Todavía no cargaste cuotas este mes";
+        }
+
+        if (ClientesActivos > 0)
+        {
+            Morosidad = (double)morosos / ClientesActivos * 100;
+            MorosidadTexto = $"{Morosidad:N0} %";
+            MorosidadDetalle = $"{morosos} de {ClientesActivos} clientes con deuda exigible";
+        }
+        else
+        {
+            Morosidad = 0;
+            MorosidadTexto = "—";
+            MorosidadDetalle = "No hay clientes activos";
+        }
+
+        if (cobradoMesAnterior > 0)
+        {
+            VariacionMensual = (cobradoMes - cobradoMesAnterior) / cobradoMesAnterior * 100;
+            VariacionTexto = $"{(VariacionMensual >= 0 ? "▲" : "▼")} {Math.Abs(VariacionMensual):N0} %";
+            VariacionDetalle = $"Mes anterior: {CobrosHelper.FormatMoney(cobradoMesAnterior)}";
+        }
+        else
+        {
+            VariacionMensual = 0;
+            VariacionTexto = cobradoMes > 0 ? "▲ nuevo" : "—";
+            VariacionDetalle = "Sin cobros el mes anterior para comparar";
+        }
     }
 
     [RelayCommand]

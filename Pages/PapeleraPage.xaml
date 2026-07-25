@@ -1,0 +1,54 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:AppCobros.PageModels"
+             xmlns:models="clr-namespace:AppCobros.Models"
+             x:Class="AppCobros.Pages.PapeleraPage"
+             Title="{Binding Title}"
+             BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <Border Grid.Row="0" Style="{StaticResource Card}" Margin="14,14,14,6">
+            <Label Text="{Binding Resumen}" Style="{StaticResource Hint}" FontSize="12" />
+        </Border>
+
+        <Label Grid.Row="1" Text="🗑 La papelera está vacía" HorizontalOptions="Center" VerticalOptions="Center"
+               Style="{StaticResource Hint}" IsVisible="{Binding EstaVacia}" />
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Eliminados}" IsVisible="{Binding HayElementos}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:MovimientoEliminado">
+                    <Border Style="{StaticResource Card}" Padding="12" Margin="14,4">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="8">
+                            <VerticalStackLayout Grid.Row="0" Grid.Column="0" VerticalOptions="Center">
+                                <Label Text="{Binding Resumen}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Detalle}" Style="{StaticResource Hint}" FontSize="11" />
+                            </VerticalStackLayout>
+
+                            <Label Grid.Row="0" Grid.Column="1" Text="{Binding MontoTexto}" FontSize="14" FontAttributes="Bold"
+                                   VerticalOptions="Center" TextColor="{StaticResource AccentGreen}">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding EsCargo}" Value="True">
+                                        <Setter Property="TextColor" Value="{StaticResource AccentRed}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+
+                            <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <Button Grid.Column="0" Text="↩ Restaurar" Style="{StaticResource BtnGhost}" FontSize="12" HeightRequest="36" Padding="0"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PapeleraViewModel}}, Path=RestaurarCommand}"
+                                        CommandParameter="{Binding .}" />
+                                <Button Grid.Column="1" Text="🗑 Borrar" Style="{StaticResource BtnDanger}" FontSize="12" HeightRequest="36" Padding="0"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PapeleraViewModel}}, Path=EliminarDefinitivoCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button Grid.Row="2" Text="Vaciar papelera" Style="{StaticResource BtnDanger}" Margin="14,8,14,16"
+                IsVisible="{Binding HayElementos}" Command="{Binding VaciarCommand}" />
+    </Grid>
+</ContentPage>

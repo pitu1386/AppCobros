@@ -18,6 +18,9 @@ public partial class AjustesViewModel : BaseViewModel
     [ObservableProperty]
     private ObservableCollection<Grupo> _grupos = new();
 
+    [ObservableProperty]
+    private ObservableCollection<ConceptoCargo> _conceptosCargo = new();
+
     // Cuota de cada grupo tal cual estaba al cargar, para detectar cambios al guardar
     private Dictionary<int, double> _cuotasOriginales = new();
 
@@ -44,6 +47,9 @@ public partial class AjustesViewModel : BaseViewModel
     [ObservableProperty]
     private string _ultimoBackupTexto = string.Empty;
 
+    [ObservableProperty]
+    private string _papeleraTexto = string.Empty;
+
     public async Task LoadDataAsync()
     {
         IsBusy = true;
@@ -51,6 +57,7 @@ public partial class AjustesViewModel : BaseViewModel
 
         Config = _data.Config;
         Grupos = new ObservableCollection<Grupo>(_data.Grupos);
+        ConceptosCargo = new ObservableCollection<ConceptoCargo>(_data.Config.ConceptosCargo);
         _cuotasOriginales = _data.Grupos.ToDictionary(g => g.Id, g => g.Cuota);
         TemaSeleccionado = Preferences.Default.Get("tema", 0);
 
@@ -58,6 +65,10 @@ public partial class AjustesViewModel : BaseViewModel
         UltimoBackupTexto = string.IsNullOrEmpty(ultimo)
             ? "Todavía no hay copia automática."
             : $"Última copia automática: {ultimo} (se guarda una por día en el dispositivo).";
+
+        PapeleraTexto = _data.Papelera.Count == 0
+            ? $"Vacía. Los movimientos que borres se guardan acá {CobrosHelper.DiasRetencionPapelera} días por si te equivocás."
+            : $"{_data.Papelera.Count} movimiento(s) eliminado(s) que todavía podés restaurar.";
 
         IsBusy = false;
     }
@@ -82,6 +93,18 @@ public partial class AjustesViewModel : BaseViewModel
             return;
         }
         Grupos.Remove(g);
+    }
+
+    [RelayCommand]
+    private void AgregarConceptoCargo()
+    {
+        ConceptosCargo.Add(new ConceptoCargo { Nombre = "Nuevo concepto", Monto = 0 });
+    }
+
+    [RelayCommand]
+    private void EliminarConceptoCargo(ConceptoCargo concepto)
+    {
+        if (concepto != null) ConceptosCargo.Remove(concepto);
     }
 
     [ObservableProperty]
@@ -109,6 +132,8 @@ public partial class AjustesViewModel : BaseViewModel
         }
 
         _data.Config = Config;
+        _data.Config.ConceptosCargo = new ObservableCollection<ConceptoCargo>(
+            ConceptosCargo.Where(c => !string.IsNullOrWhiteSpace(c.Nombre)));
         _data.Grupos = new ObservableCollection<Grupo>(Grupos);
         await _dataService.SaveDataAsync(_data);
         _cuotasOriginales = Grupos.ToDictionary(g => g.Id, g => g.Cuota);
@@ -134,6 +159,12 @@ public partial class AjustesViewModel : BaseViewModel
             .Select(h => $"{DateTime.Parse(h.Fecha):dd/MM/yyyy}: {CobrosHelper.FormatMoney(h.Cuota)}");
 
         await Shell.Current.DisplayAlertAsync($"Historial · {g.Nombre}", string.Join("\n", lineas), "OK");
+    }
+
+    [RelayCommand]
+    private async Task AbrirPapeleraAsync()
+    {
+        await Shell.Current.GoToAsync(nameof(PapeleraPage));
     }
 
     [RelayCommand]

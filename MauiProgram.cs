@@ -42,6 +42,7 @@ namespace AppCobros
             builder.Services.AddTransient<AppCobros.PageModels.ClienteDetalleViewModel>();
             builder.Services.AddTransient<AppCobros.PageModels.ClienteFormViewModel>();
             builder.Services.AddTransient<AppCobros.PageModels.ReclamarMasivoViewModel>();
+            builder.Services.AddTransient<AppCobros.PageModels.PapeleraViewModel>();
 
             builder.Services.AddTransient<AppCobros.Pages.DashboardPage>();
             builder.Services.AddTransient<AppCobros.Pages.InicioPage>();
@@ -50,6 +51,7 @@ namespace AppCobros
             builder.Services.AddTransient<AppCobros.Pages.ClienteDetallePage>();
             builder.Services.AddTransient<AppCobros.Pages.ClienteFormPage>();
             builder.Services.AddTransient<AppCobros.Pages.ReclamarMasivoPage>();
+            builder.Services.AddTransient<AppCobros.Pages.PapeleraPage>();
 
             return builder.Build();
         }

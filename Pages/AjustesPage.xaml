@@ -1,6 +1,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:AppCobros.PageModels"
+             xmlns:models="clr-namespace:AppCobros.Models"
              x:Class="AppCobros.Pages.AjustesPage"
              Title="{Binding Title}"
              BackgroundColor="{AppThemeBinding Light=#F4F3FB, Dark=#141221}">
@@ -57,6 +58,30 @@
                 </VerticalStackLayout>
             </Border>
 
+            <!-- Cargos frecuentes -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="CARGOS FRECUENTES" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Aparecen como accesos rápidos al crear un cargo manual. Activá «cuota» si ese cargo debe marcar el mes como facturado." Style="{StaticResource Hint}" />
+
+                    <StackLayout BindableLayout.ItemsSource="{Binding ConceptosCargo}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:ConceptoCargo">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,10">
+                                    <Entry Grid.Column="0" Text="{Binding Nombre}" Placeholder="Concepto" />
+                                    <Entry Grid.Column="1" Text="{Binding Monto}" Placeholder="Monto" Keyboard="Numeric" WidthRequest="95" />
+                                    <Switch Grid.Column="2" IsToggled="{Binding EsCuotaMensual}" OnColor="{StaticResource AccentGreen}" VerticalOptions="Center" />
+                                    <Button Grid.Column="3" Text="🗑" Style="{StaticResource BtnDanger}" CornerRadius="8" WidthRequest="38" HeightRequest="38" Padding="0"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AjustesViewModel}}, Path=EliminarConceptoCargoCommand}" CommandParameter="{Binding .}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </StackLayout>
+
+                    <Button Text="＋ Agregar concepto" Style="{StaticResource BtnGhost}" Command="{Binding AgregarConceptoCargoCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
             <!-- Cotización Euro -->
             <Border Style="{StaticResource Card}">
                 <VerticalStackLayout Spacing="10">
@@ -89,6 +114,15 @@
                     <Label Text="ENLACE DE PAGO (ALIAS, CBU, LINK)" Style="{StaticResource SectionTitle}" />
                     <Editor Text="{Binding Config.EnlacePago}" AutoSize="TextChanges" Placeholder="Ej: mi.alias.mp" />
                     <Label Text="Podés usar el comodín {enlace_pago} en los mensajes de arriba." Style="{StaticResource Hint}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Papelera -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="PAPELERA" Style="{StaticResource SectionTitle}" />
+                    <Label Text="{Binding PapeleraTexto}" Style="{StaticResource Hint}" />
+                    <Button Text="🗑 Ver movimientos eliminados" Style="{StaticResource BtnGhost}" Command="{Binding AbrirPapeleraCommand}" />
                 </VerticalStackLayout>
             </Border>
 

@@ -14,26 +14,39 @@
         </Border>
 
         <!-- Orden + Filtro + Nuevo cliente -->
-        <Grid Grid.Row="1" Margin="14,0,14,8" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
-            <Border Grid.Column="0" Style="{StaticResource Card}" StrokeShape="RoundRectangle 9" Padding="12,8">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding ToggleSortCommand}" />
-                </Border.GestureRecognizers>
-                <HorizontalStackLayout Spacing="5">
-                    <Label Text="Orden:" Style="{StaticResource Hint}" FontSize="12" VerticalOptions="Center" />
-                    <Label Text="{Binding OrdenLabel}" FontSize="12" TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" FontAttributes="Bold" VerticalOptions="Center" />
+        <Grid Grid.Row="1" Margin="14,0,14,8" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <ScrollView Grid.Column="0" Orientation="Horizontal" HorizontalScrollBarVisibility="Never" VerticalOptions="Center">
+                <HorizontalStackLayout Spacing="8">
+                    <Border Style="{StaticResource Card}" StrokeShape="RoundRectangle 9" Padding="12,8">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ToggleSortCommand}" />
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="5">
+                            <Label Text="Orden:" Style="{StaticResource Hint}" FontSize="12" VerticalOptions="Center" />
+                            <Label Text="{Binding OrdenLabel}" FontSize="12" TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Border>
+                    <Border Style="{StaticResource Card}" StrokeShape="RoundRectangle 9" Padding="12,8">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ToggleFiltroEstadoCommand}" />
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="5">
+                            <Label Text="Estado:" Style="{StaticResource Hint}" FontSize="12" VerticalOptions="Center" />
+                            <Label Text="{Binding FiltroEstadoLabel}" FontSize="12" TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Border>
+                    <Border Style="{StaticResource Card}" StrokeShape="RoundRectangle 9" Padding="12,8">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ElegirGrupoCommand}" />
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="5">
+                            <Label Text="Grupo:" Style="{StaticResource Hint}" FontSize="12" VerticalOptions="Center" />
+                            <Label Text="{Binding FiltroGrupoLabel}" FontSize="12" TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Border>
                 </HorizontalStackLayout>
-            </Border>
-            <Border Grid.Column="1" Style="{StaticResource Card}" StrokeShape="RoundRectangle 9" Padding="12,8">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding ToggleFiltroEstadoCommand}" />
-                </Border.GestureRecognizers>
-                <HorizontalStackLayout Spacing="5">
-                    <Label Text="Estado:" Style="{StaticResource Hint}" FontSize="12" VerticalOptions="Center" />
-                    <Label Text="{Binding FiltroEstadoLabel}" FontSize="12" TextColor="{AppThemeBinding Light=#3A3370, Dark=#B7B3D9}" FontAttributes="Bold" VerticalOptions="Center" />
-                </HorizontalStackLayout>
-            </Border>
-            <Button Grid.Column="3" Text="＋ Nuevo cliente" Style="{StaticResource BtnSuccess}" FontSize="12" Padding="12,0" HeightRequest="36" CornerRadius="9"
+            </ScrollView>
+            <Button Grid.Column="1" Text="＋ Nuevo" Style="{StaticResource BtnSuccess}" FontSize="12" Padding="12,0" HeightRequest="36" CornerRadius="9"
                     Command="{Binding NuevoClienteCommand}" />
         </Grid>
 

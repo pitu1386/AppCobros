@@ -35,6 +35,21 @@ public partial class ClientesViewModel : BaseViewModel
         _ => "Todos"
     };
 
+    // 0 = todos los grupos. -1 = clientes sin grupo.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FiltroGrupoLabel))]
+    private int _filtroGrupoId;
+
+    public string FiltroGrupoLabel
+    {
+        get
+        {
+            if (FiltroGrupoId == 0) return "Todos";
+            if (FiltroGrupoId == -1) return "Sin grupo";
+            return _data?.Grupos.FirstOrDefault(g => g.Id == FiltroGrupoId)?.Nombre ?? "Todos";
+        }
+    }
+
     public ClientesViewModel(IDataService dataService)
     {
         _dataService = dataService;
@@ -46,6 +61,12 @@ public partial class ClientesViewModel : BaseViewModel
     {
         IsBusy = true;
         _data = await _dataService.LoadDataAsync();
+
+        // Si el grupo filtrado se eliminó desde Ajustes, volvemos a "Todos".
+        if (FiltroGrupoId > 0 && !_data.Grupos.Any(g => g.Id == FiltroGrupoId))
+            FiltroGrupoId = 0;
+
+        OnPropertyChanged(nameof(FiltroGrupoLabel));
         FilterClientes();
         IsBusy = false;
     }
@@ -73,6 +94,31 @@ public partial class ClientesViewModel : BaseViewModel
             "aldia" => "afavor",
             _ => "todos"
         };
+        FilterClientes();
+    }
+
+    [RelayCommand]
+    private async Task ElegirGrupoAsync()
+    {
+        if (_data == null) return;
+
+        const string todos = "Todos los grupos";
+        const string sinGrupo = "Sin grupo";
+
+        var opciones = new List<string> { todos };
+        opciones.AddRange(_data.Grupos.Select(g => g.Nombre));
+        opciones.Add(sinGrupo);
+
+        string? elegido = await Shell.Current.DisplayActionSheetAsync("Filtrar por grupo", "Cancelar", null, opciones.ToArray());
+        if (string.IsNullOrEmpty(elegido) || elegido == "Cancelar") return;
+
+        FiltroGrupoId = elegido switch
+        {
+            todos => 0,
+            sinGrupo => -1,
+            _ => _data.Grupos.FirstOrDefault(g => g.Nombre == elegido)?.Id ?? 0
+        };
+
         FilterClientes();
     }
 
@@ -108,12 +154,14 @@ public partial class ClientesViewModel : BaseViewModel
 
         GruposDeClientes.Clear();
         var mesKey = CobrosHelper.MesKey(DateTime.Now);
-        bool hayFiltrosActivos = !string.IsNullOrWhiteSpace(SearchText) || FiltroEstado != "todos";
+        bool hayFiltrosActivos = !string.IsNullOrWhiteSpace(SearchText) || FiltroEstado != "todos" || FiltroGrupoId != 0;
 
         var activos = _data.Clients.Where(c => !c.Archivado).ToList();
 
         foreach (var g in _data.Grupos)
         {
+            if (FiltroGrupoId != 0 && g.Id != FiltroGrupoId) continue;
+
             var clientes = activos.Where(c => c.GrupoId == g.Id).ToList();
 
             if (!string.IsNullOrWhiteSpace(SearchText))
@@ -132,24 +180,32 @@ public partial class ClientesViewModel : BaseViewModel
             }
         }
 
-        var sinGrupo = activos.Where(c => CobrosHelper.GrupoDe(c, _data.Grupos) == null).ToList();
-        if (!string.IsNullOrWhiteSpace(SearchText))
+        if (FiltroGrupoId == 0 || FiltroGrupoId == -1)
         {
-            sinGrupo = sinGrupo.Where(c => c.Nombre.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
+            var sinGrupo = activos.Where(c => CobrosHelper.GrupoDe(c, _data.Grupos) == null).ToList();
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                sinGrupo = sinGrupo.Where(c => c.Nombre.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
 
-        var sinGrupoViewModels = sinGrupo.Select(c => new ClientItemViewModel(c, _data.Grupos, _data.Config, mesKey))
-            .Where(CumpleFiltroEstado)
-            .ToList();
+            var sinGrupoViewModels = sinGrupo.Select(c => new ClientItemViewModel(c, _data.Grupos, _data.Config, mesKey))
+                .Where(CumpleFiltroEstado)
+                .ToList();
 
-        if (sinGrupoViewModels.Count > 0)
-        {
-            SortViewModels(sinGrupoViewModels);
-            GruposDeClientes.Add(new ClientGroupViewModel("Sin grupo", 0, 0, sinGrupoViewModels));
+            if (sinGrupoViewModels.Count > 0)
+            {
+                SortViewModels(sinGrupoViewModels);
+                GruposDeClientes.Add(new ClientGroupViewModel("Sin grupo", 0, 0, sinGrupoViewModels));
+            }
         }
 
         // Archivados: solo aparecen si coinciden con la búsqueda; no se les aplica el filtro de estado.
         var archivados = _data.Clients.Where(c => c.Archivado).ToList();
+        if (FiltroGrupoId == -1)
+            archivados = archivados.Where(c => CobrosHelper.GrupoDe(c, _data.Grupos) == null).ToList();
+        else if (FiltroGrupoId != 0)
+            archivados = archivados.Where(c => c.GrupoId == FiltroGrupoId).ToList();
+
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             archivados = archivados.Where(c => c.Nombre.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToList();

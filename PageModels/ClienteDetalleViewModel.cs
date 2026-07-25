@@ -193,7 +193,7 @@ public partial class ClienteDetalleViewModel : BaseViewModel
     {
         if (Client == null || _data == null) return;
 
-        var page = new CargoManualPage();
+        var page = new CargoManualPage(_data.Config.ConceptosCargo);
         await Shell.Current.Navigation.PushModalAsync(page);
         var result = await page.Result;
         if (result == null) return;
@@ -217,6 +217,31 @@ public partial class ClienteDetalleViewModel : BaseViewModel
 
         await _dataService.SaveDataAsync(_data);
         await LoadDataAsync();
+    }
+
+    [RelayCommand]
+    private async Task EnviarEstadoCuentaAsync()
+    {
+        if (Client == null || _data == null) return;
+
+        IsBusy = true;
+        try
+        {
+            string path = await _receiptService.GenerateAccountStatementAsync(Client, _data.Grupos, _data.Config);
+            await Share.RequestAsync(new ShareFileRequest
+            {
+                Title = $"Estado de cuenta · {Client.Nombre}",
+                File = new ShareFile(path)
+            });
+        }
+        catch (Exception)
+        {
+            await Shell.Current.DisplayAlertAsync("Error", "No se pudo generar el estado de cuenta.", "OK");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -279,16 +304,35 @@ public partial class ClienteDetalleViewModel : BaseViewModel
     {
         if (Client == null || _data == null) return;
 
-        bool confirm = await Shell.Current.DisplayAlertAsync("Borrar", "¿Eliminar este movimiento? Si es una cuota, el mes quedará liberado.", "Sí", "No");
-        if (confirm)
+        bool confirm = await Shell.Current.DisplayAlertAsync(
+            "Borrar",
+            $"¿Eliminar este movimiento? Va a la papelera y podés restaurarlo durante {CobrosHelper.DiasRetencionPapelera} días desde Ajustes.",
+            "Sí", "No");
+        if (!confirm) return;
+
+        var original = Client.Movimientos.FirstOrDefault(x => x.Id == m.Id);
+        if (original == null) return;
+
+        var eliminado = CobrosHelper.EnviarAPapelera(_data, Client, original);
+        await _dataService.SaveDataAsync(_data);
+        await LoadDataAsync();
+
+        await AppShell.DisplayUndoSnackbarAsync(
+            $"Movimiento eliminado · {CobrosHelper.FormatMoney(original.Monto)}",
+            () => RestaurarMovimientoAsync(eliminado));
+    }
+
+    private async Task RestaurarMovimientoAsync(MovimientoEliminado eliminado)
+    {
+        if (_data == null) return;
+
+        if (!CobrosHelper.RestaurarDePapelera(_data, eliminado))
         {
-            Client.Movimientos.Remove(Client.Movimientos.First(x => x.Id == m.Id));
-            if (m.Tipo == "cargo" && !string.IsNullOrEmpty(m.Mes))
-            {
-                Client.Meses.Remove(m.Mes);
-            }
-            await _dataService.SaveDataAsync(_data);
-            await LoadDataAsync();
+            await Shell.Current.DisplayAlertAsync("No se pudo restaurar", "El cliente de ese movimiento ya no existe.", "OK");
+            return;
         }
+
+        await _dataService.SaveDataAsync(_data);
+        await LoadDataAsync();
     }
 }

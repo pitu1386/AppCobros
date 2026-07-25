@@ -91,4 +91,67 @@ public static class CobrosHelper
     {
         return items.Sum(x => x.Resto);
     }
+
+    // ── Papelera ────────────────────────────────────────────────
+
+    /// Cuántos días se conservan los movimientos borrados antes de descartarlos solos.
+    public const int DiasRetencionPapelera = 30;
+    private const int MaxItemsPapelera = 200;
+
+    /// Manda un movimiento a la papelera dejando el cliente consistente (libera el mes si era una cuota).
+    public static MovimientoEliminado EnviarAPapelera(CobrosData data, Client cliente, Movimiento movimiento)
+    {
+        string? mesLiberado = null;
+        if (movimiento.Tipo == "cargo" && !string.IsNullOrEmpty(movimiento.Mes) && cliente.Meses.Contains(movimiento.Mes))
+            mesLiberado = movimiento.Mes;
+
+        cliente.Movimientos.Remove(movimiento);
+        if (mesLiberado != null) cliente.Meses.Remove(mesLiberado);
+
+        var eliminado = new MovimientoEliminado
+        {
+            ClienteId = cliente.Id,
+            ClienteNombre = cliente.Nombre,
+            EliminadoEl = DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
+            MesLiberado = mesLiberado,
+            Movimiento = movimiento
+        };
+
+        data.Papelera.Insert(0, eliminado);
+        PurgarPapelera(data);
+        return eliminado;
+    }
+
+    /// Devuelve el movimiento a la cuenta del cliente. False si el cliente ya no existe.
+    public static bool RestaurarDePapelera(CobrosData data, MovimientoEliminado eliminado)
+    {
+        var cliente = data.Clients.FirstOrDefault(c => c.Id == eliminado.ClienteId);
+        if (cliente == null) return false;
+
+        if (!cliente.Movimientos.Any(m => m.Id == eliminado.Movimiento.Id))
+            cliente.Movimientos.Add(eliminado.Movimiento);
+
+        if (!string.IsNullOrEmpty(eliminado.MesLiberado) && !cliente.Meses.Contains(eliminado.MesLiberado))
+            cliente.Meses.Add(eliminado.MesLiberado);
+
+        data.Papelera.Remove(eliminado);
+        return true;
+    }
+
+    /// Descarta lo que ya pasó el tiempo de retención y recorta la lista si creció demasiado.
+    public static void PurgarPapelera(CobrosData data)
+    {
+        var limite = DateTime.Now.AddDays(-DiasRetencionPapelera);
+
+        var vencidos = data.Papelera
+            .Where(e => DateTime.TryParseExact(e.EliminadoEl, "dd/MM/yyyy HH:mm",
+                            CultureInfo.InvariantCulture, DateTimeStyles.None, out var fecha)
+                        && fecha < limite)
+            .ToList();
+
+        foreach (var v in vencidos) data.Papelera.Remove(v);
+
+        while (data.Papelera.Count > MaxItemsPapelera)
+            data.Papelera.RemoveAt(data.Papelera.Count - 1);
+    }
 }

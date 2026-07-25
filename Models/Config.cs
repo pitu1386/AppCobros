@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 namespace AppCobros.Models;
@@ -21,4 +22,8 @@ public class Config
 
     [JsonPropertyName("cotizacionEuro")]
     public double CotizacionEuro { get; set; } = 0; // Pesos por 1 euro. 0 = no configurada, oculta la card.
+
+    /// Cargos frecuentes que aparecen como accesos rápidos al crear un cargo manual.
+    [JsonPropertyName("conceptosCargo")]
+    public ObservableCollection<ConceptoCargo> ConceptosCargo { get; set; } = new();
 }

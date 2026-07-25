@@ -48,6 +48,7 @@ public class DataService : IDataService
         {
             var json = await File.ReadAllTextAsync(_filePath);
             _cachedData = JsonSerializer.Deserialize<CobrosData>(json) ?? new CobrosData();
+            WidgetService.Actualizar(_cachedData);
             return _cachedData;
         }
         catch
@@ -94,6 +95,7 @@ public class DataService : IDataService
             File.Move(tmpPath, _filePath);
 
         BackupAutomatico(json);
+        WidgetService.Actualizar(data);
     }
 
     // Una copia por día, rotando las últimas MaxBackups

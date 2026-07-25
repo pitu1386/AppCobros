@@ -14,6 +14,10 @@ public class CobrosData
     [JsonPropertyName("clients")]
     public ObservableCollection<Client> Clients { get; set; } = new ObservableCollection<Client>();
 
+    /// Movimientos borrados que todavía se pueden restaurar.
+    [JsonPropertyName("papelera")]
+    public ObservableCollection<MovimientoEliminado> Papelera { get; set; } = new ObservableCollection<MovimientoEliminado>();
+
     [JsonPropertyName("nextId")]
     public int NextId { get; set; } = 1;
 

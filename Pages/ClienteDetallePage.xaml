@@ -31,6 +31,8 @@
                 <Button Grid.Column="1" Text="✎ Editar cliente" Style="{StaticResource BtnGhost}" Command="{Binding EditarClienteCommand}" />
             </Grid>
 
+            <Button Text="📄 Compartir estado de cuenta" Style="{StaticResource BtnGhost}" Command="{Binding EnviarEstadoCuentaCommand}" />
+
             <!-- Pendiente de pago -->
             <Border Style="{StaticResource Card}"
                     IsVisible="{Binding TienePendientes}">
