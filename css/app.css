@@ -1,0 +1,187 @@
+/* ==========================================================
+   LIBRETA DE COBROS · Temas (claro / oscuro)
+   Los valores son tripletas RGB para que Tailwind aplique
+   opacidad (bg-brand/40, etc.). El tema se activa con la clase
+   `dark` en <html>; lo maneja ThemeService + window.lcTheme.
+   ========================================================== */
+
+:root {
+    color-scheme: light;
+
+    --c-app: 247 247 248;
+    --c-surface: 255 255 255;
+    --c-well: 241 241 243;
+    --c-well2: 232 232 236;
+    --c-line: 228 228 232;
+    --c-line2: 214 214 220;
+
+    --c-ink: 23 23 26;
+    --c-ink2: 60 60 66;
+    --c-muted: 106 106 114;
+    --c-faint: 151 151 159;
+
+    --c-brand: 79 70 229;
+    --c-branddeep: 67 56 202;
+    --c-brandtext: 67 56 202;
+    --c-brandbg: 238 240 254;
+
+    --c-ok: 21 128 61;
+    --c-oktext: 22 101 52;
+    --c-okbg: 231 245 236;
+
+    --c-warn: 217 119 6;
+    --c-warntext: 146 80 10;
+    --c-warnbg: 253 240 220;
+
+    --c-danger: 220 38 38;
+    --c-dangertext: 185 28 28;
+    --c-dangerbg: 253 236 236;
+
+    --c-info: 37 99 235;
+    --c-infotext: 29 78 216;
+    --c-infobg: 232 239 253;
+
+    /* Tarjeta "caja": tinta sobre papel. */
+    --c-hero: 23 23 26;
+    --c-herotext: 255 255 255;
+    --c-heromuted: 161 161 170;
+    --c-heroline: 46 46 52;
+}
+
+html.dark {
+    color-scheme: dark;
+
+    --c-app: 11 11 12;
+    --c-surface: 22 22 24;
+    --c-well: 30 30 32;
+    --c-well2: 44 44 47;
+    --c-line: 38 38 41;
+    --c-line2: 52 52 58;
+
+    --c-ink: 244 244 245;
+    --c-ink2: 214 214 218;
+    --c-muted: 139 139 146;
+    --c-faint: 106 106 114;
+
+    --c-brand: 99 102 241;
+    --c-branddeep: 79 70 229;
+    --c-brandtext: 165 180 252;
+    --c-brandbg: 35 35 58;
+
+    --c-ok: 34 197 94;
+    --c-oktext: 134 239 172;
+    --c-okbg: 20 49 31;
+
+    --c-warn: 245 158 11;
+    --c-warntext: 252 211 77;
+    --c-warnbg: 58 42 12;
+
+    --c-danger: 239 68 68;
+    --c-dangertext: 252 165 165;
+    --c-dangerbg: 58 26 26;
+
+    --c-info: 96 165 250;
+    --c-infotext: 147 197 253;
+    --c-infobg: 23 38 63;
+
+    --c-hero: 22 22 24;
+    --c-herotext: 244 244 245;
+    --c-heromuted: 139 139 146;
+    --c-heroline: 44 44 47;
+}
+
+html, body {
+    font-family: 'Barlow', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: rgb(var(--c-app));
+    color: rgb(var(--c-ink));
+}
+
+h1:focus { outline: none; }
+a { color: rgb(var(--c-brandtext)); }
+
+/* Pestañas subrayadas. */
+.lc-tabs {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid rgb(var(--c-line));
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.lc-tabs::-webkit-scrollbar { display: none; }
+.lc-tab {
+    padding: 10px 0;
+    margin-bottom: -1px;
+    font-size: 15px;
+    font-weight: 600;
+    color: rgb(var(--c-faint));
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    background: none;
+    transition: color .15s;
+}
+.lc-tab:hover { color: rgb(var(--c-ink2)); }
+.lc-tab.active {
+    color: rgb(var(--c-ink));
+    font-weight: 700;
+    border-bottom-color: rgb(var(--c-brand));
+}
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    color: #141210;
+}
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem 1rem 1rem 1.5rem;
+    color: white;
+}
+.blazor-error-boundary::after { content: "Ocurrió un error."; }
+
+.loading-progress {
+    position: absolute;
+    display: block;
+    width: 8rem;
+    height: 8rem;
+    inset: 20vh 0 auto 0;
+    margin: 0 auto;
+}
+.loading-progress circle {
+    fill: none;
+    stroke: rgb(var(--c-line2));
+    stroke-width: 0.6rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+.loading-progress circle:last-child {
+    stroke: rgb(var(--c-brand));
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+    transition: stroke-dasharray 0.05s ease-in-out;
+}
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: bold;
+    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+}
+.loading-progress-text:after { content: var(--blazor-load-percentage-text, "Cargando"); }
+
+.valid.modified:not([type=checkbox]) { outline: 1px solid rgb(var(--c-ok)); }
+.invalid { outline: 1px solid rgb(var(--c-danger)); }
+.validation-message { color: rgb(var(--c-dangertext)); }
