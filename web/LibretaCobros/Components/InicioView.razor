@@ -1,0 +1,103 @@
+@inject ICobrosDataService Data
+@implements IDisposable
+
+<div class="bg-hero text-herotext px-4 pt-4 pb-5 rounded-b-2xl">
+    <div class="text-[11px] font-bold tracking-widest text-heromuted">@MesLabel.ToUpper() · RESUMEN</div>
+    <div class="grid grid-cols-2 gap-2 mt-3">
+        <div class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5">
+            <div class="text-[10px] tracking-wide text-heromuted">POR COBRAR</div>
+            <div class="font-cond font-extrabold text-lg text-[#ffb0a5]">@CobrosHelper.FormatMoney(_porCobrar)</div>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5">
+            <div class="text-[10px] tracking-wide text-heromuted">COBRADO ESTE MES</div>
+            <div class="font-cond font-extrabold text-lg text-[#8fe6be]">@CobrosHelper.FormatMoney(_cobradoMes)</div>
+        </div>
+    </div>
+</div>
+
+<div class="p-4 space-y-3">
+    <div class="rounded-xl bg-surface border border-line p-4">
+        <div class="text-xs font-bold uppercase tracking-wide text-faint mb-2">Cuotas del mes</div>
+        @if (_sinFacturar > 0)
+        {
+            <p class="text-sm text-ink2 mb-3">@_sinFacturar cliente(s) sin la cuota de @MesLabel cargada.</p>
+            <button @onclick="CargarCuotasAsync" disabled="@_busy"
+                    class="w-full rounded-xl bg-brand text-white font-bold py-2.5 text-sm disabled:opacity-50">
+                @(_busy ? "Cargando…" : $"Cargar cuotas de {MesLabel} a todos")
+            </button>
+        }
+        else
+        {
+            <div class="rounded-lg bg-okbg text-oktext text-sm px-3 py-2.5">✓ Todas las cuotas del mes están cargadas.</div>
+        }
+    </div>
+
+    <div class="rounded-xl bg-surface border border-line overflow-hidden">
+        <div class="flex items-center justify-between px-4 pt-4 pb-2">
+            <span class="text-xs font-bold uppercase tracking-wide text-faint">Cuentas con deuda</span>
+            <span class="text-xs text-muted">@_conDeuda.Count</span>
+        </div>
+        @if (_conDeuda.Count > 0)
+        {
+            <div class="px-3 pb-3">
+                <button @onclick="() => OnReclamarMasivo.InvokeAsync()"
+                        class="w-full rounded-xl bg-[#25D366] text-white font-bold py-2.5 text-sm">
+                    📲 Reclamar a todos por WhatsApp
+                </button>
+            </div>
+            <div class="divide-y divide-line border-t border-line">
+                @foreach (var v in _conDeuda)
+                {
+                    <ClienteRow V="v" OnClick="id => OnOpenCliente.InvokeAsync(id)" />
+                }
+            </div>
+        }
+        else
+        {
+            <p class="px-4 pb-4 text-sm text-muted">Nadie con deuda. Todo al día ✅</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnOpenCliente { get; set; }
+    [Parameter] public EventCallback OnReclamarMasivo { get; set; }
+
+    private string MesKey => ClienteVista.MesActual;
+    private string MesLabel => CobrosHelper.MesLabel(MesKey);
+
+    private double _porCobrar, _cobradoMes;
+    private int _sinFacturar;
+    private List<ClienteVista> _conDeuda = new();
+    private bool _busy;
+
+    protected override void OnInitialized() => Data.OnChange += Recalc;
+    protected override void OnParametersSet() => Recalc();
+
+    private void Recalc()
+    {
+        var activos = Data.Clientes.Where(c => !c.Archivado).ToList();
+        _sinFacturar = activos.Count(c => !CobrosHelper.FacturadoMes(c, MesKey));
+
+        _porCobrar = activos.Sum(c => Math.Max(0, CobrosHelper.SaldoDe(c)));
+        _cobradoMes = Data.Clientes.SelectMany(c => c.Movimientos)
+            .Where(m => m.Tipo == "pago" && m.Fecha.StartsWith(MesKey)).Sum(m => m.Monto);
+
+        var vistas = activos.Select(c => new ClienteVista(c, Data.Grupos, Data.Config, MesKey))
+            .Where(v => v.Saldo > 0).ToList();
+        _conDeuda = (Data.Config.Orden == "nombre"
+                ? vistas.OrderBy(v => v.Cliente.Nombre, StringComparer.OrdinalIgnoreCase)
+                : vistas.OrderByDescending(v => v.SaldoAbs))
+            .ToList();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CargarCuotasAsync()
+    {
+        _busy = true;
+        await Data.GenerarCuotasMesAsync(MesKey);
+        _busy = false;
+    }
+
+    public void Dispose() => Data.OnChange -= Recalc;
+}

@@ -1,0 +1,134 @@
+@inject ICobrosDataService Data
+@implements IDisposable
+
+<div class="p-4 space-y-3 max-w-md mx-auto">
+    <div class="flex items-center justify-between">
+        <button @onclick="() => OnBack.InvokeAsync()" class="text-sm text-brandtext font-semibold">← Ajustes</button>
+        <h1 class="font-cond font-extrabold text-lg">Dashboard · @MesLabel</h1>
+        <span class="w-16"></span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2">
+        <Stat Label="Cobrado este mes" Value="@CobrosHelper.FormatMoney(_cobradoMes)" Tone="ok" />
+        <Stat Label="Deuda exigible" Value="@CobrosHelper.FormatMoney(_deuda)" Tone="danger" />
+        <Stat Label="Proyección mensual" Value="@CobrosHelper.FormatMoney(_proyeccion)" Tone="" />
+        <Stat Label="Clientes activos" Value="@_activos.ToString()" Tone="" />
+    </div>
+
+    <div class="grid grid-cols-3 gap-2">
+        <Stat Label="Cobrabilidad" Value="@Pct(_cobrabilidad)" Tone="" />
+        <Stat Label="Morosidad" Value="@Pct(_morosidad)" Tone="" />
+        <Stat Label="vs mes ant." Value="@_variacionTxt" Tone="@(_variacion >= 0 ? "ok" : "danger")" />
+    </div>
+
+    @if (_cotiz > 0)
+    {
+        <div class="rounded-xl bg-surface border border-line p-4 text-sm">
+            <div class="text-xs uppercase tracking-wide text-faint font-bold">Cobrado este mes en euros</div>
+            <div class="font-cond font-extrabold text-2xl">€ @_eurosMes.ToString("N2", Es)</div>
+            <div class="text-xs text-faint mt-1">Cotización actual: $ @_cotiz.ToString("N0", Es) por €</div>
+        </div>
+    }
+
+    <div class="rounded-xl bg-surface border border-line p-4">
+        <div class="text-xs uppercase tracking-wide text-faint font-bold mb-3">Cobros últimos 6 meses</div>
+        <div class="flex items-end gap-2 h-32">
+            @foreach (var h in _historial)
+            {
+                <div class="flex-1 flex flex-col items-center gap-1">
+                    <div class="w-full rounded-t bg-brand/70" style="height:@(Math.Max(4, h.Pct))%"></div>
+                    <span class="text-[9px] text-faint">@h.Label.Split(' ')[0][..3]</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="rounded-xl bg-surface border border-line overflow-hidden">
+        <div class="px-4 pt-4 pb-2 text-xs uppercase tracking-wide text-faint font-bold">Top deudores</div>
+        <div class="divide-y divide-line">
+            @foreach (var v in _topDeudores)
+            {
+                <ClienteRow V="v" OnClick="id => OnOpenCliente.InvokeAsync(id)" />
+            }
+            @if (_topDeudores.Count == 0) { <p class="px-4 py-4 text-sm text-muted">Nadie debe ✅</p> }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback<string> OnOpenCliente { get; set; }
+
+    private static readonly System.Globalization.CultureInfo Es = System.Globalization.CultureInfo.GetCultureInfo("es-AR");
+
+    private record Barra(string Label, double Monto, double Pct);
+
+    private string MesKey => ClienteVista.MesActual;
+    private string MesLabel => CobrosHelper.MesLabel(MesKey);
+
+    private double _cobradoMes, _deuda, _proyeccion, _cotiz, _eurosMes, _cobrabilidad, _morosidad, _variacion;
+    private int _activos;
+    private string _variacionTxt = "—";
+    private List<Barra> _historial = new();
+    private List<ClienteVista> _topDeudores = new();
+
+    protected override void OnInitialized() => Data.OnChange += Recalc;
+    protected override void OnParametersSet() => Recalc();
+
+    private static string Pct(double v) => v <= 0 ? "—" : $"{v:N0} %";
+
+    private void Recalc()
+    {
+        var now = DateTime.Now;
+        var mesAnt = CobrosHelper.MesKey(now.AddMonths(-1));
+        _cotiz = Data.Config.CotizacionEuro;
+
+        var activos = Data.Clientes.Where(c => !c.Archivado).ToList();
+        _activos = activos.Count;
+        _proyeccion = activos.Sum(c => CobrosHelper.CuotaDe(c, Data.Grupos, Data.Config));
+
+        var deudores = activos.Select(c => new ClienteVista(c, Data.Grupos, Data.Config, MesKey)).Where(v => v.Exigible > 0).ToList();
+        _deuda = deudores.Sum(v => v.Exigible);
+        _topDeudores = deudores.OrderByDescending(v => v.SaldoAbs).Take(3).ToList();
+        int morosos = deudores.Count;
+
+        double facturadoMes = 0, cobradoMesAnt = 0;
+        _cobradoMes = 0; _eurosMes = 0;
+        foreach (var m in Data.Clientes.SelectMany(c => c.Movimientos))
+        {
+            if (m.Tipo == "cargo") { if (m.Fecha.StartsWith(MesKey)) facturadoMes += m.Monto; continue; }
+            if (m.Tipo != "pago") continue;
+            if (m.Fecha.StartsWith(mesAnt)) cobradoMesAnt += m.Monto;
+            if (m.Fecha.StartsWith(MesKey))
+            {
+                _cobradoMes += m.Monto;
+                var tasa = m.CotizacionEuro ?? _cotiz;
+                if (tasa > 0) _eurosMes += m.Monto / tasa;
+            }
+        }
+
+        _cobrabilidad = facturadoMes > 0 ? Math.Min(_cobradoMes / facturadoMes * 100, 999) : 0;
+        _morosidad = _activos > 0 ? (double)morosos / _activos * 100 : 0;
+        if (cobradoMesAnt > 0)
+        {
+            _variacion = (_cobradoMes - cobradoMesAnt) / cobradoMesAnt * 100;
+            _variacionTxt = $"{(_variacion >= 0 ? "▲" : "▼")} {Math.Abs(_variacion):N0} %";
+        }
+        else { _variacion = 0; _variacionTxt = _cobradoMes > 0 ? "▲ nuevo" : "—"; }
+
+        var barras = new List<Barra>();
+        for (int i = 5; i >= 0; i--)
+        {
+            var mk = CobrosHelper.MesKey(now.AddMonths(-i));
+            var total = Data.Clientes.SelectMany(c => c.Movimientos)
+                .Where(m => m.Tipo == "pago" && m.Fecha.StartsWith(mk)).Sum(m => m.Monto);
+            barras.Add(new(CobrosHelper.MesLabel(mk), total, 0));
+        }
+        var max = barras.Count > 0 ? barras.Max(b => b.Monto) : 0;
+        _historial = barras.Select(b => b with { Pct = max > 0 ? b.Monto / max * 100 : 0 }).ToList();
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Data.OnChange -= Recalc;
+}

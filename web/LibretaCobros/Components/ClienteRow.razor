@@ -1,0 +1,25 @@
+<button @onclick="() => OnClick.InvokeAsync(V.Cliente.Id)"
+        class="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-well transition-colors">
+    <span class="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-[11px] font-bold text-white
+                 @(V.EsExigible ? "bg-danger" : "bg-brand")">
+        @V.Iniciales
+    </span>
+    <span class="flex-1 min-w-0">
+        <span class="block font-semibold text-sm truncate">
+            @V.Cliente.Nombre
+            @if (V.Cliente.Archivado) { <span class="text-[10px] text-faint font-normal">· archivado</span> }
+        </span>
+        <span class="block text-xs text-muted truncate">@V.Detalle</span>
+    </span>
+    <span class="text-right shrink-0">
+        <span class="block font-cond font-bold text-sm @(V.Saldo > 0 ? "text-dangertext" : V.Saldo < 0 ? "text-oktext" : "text-muted")">
+            @V.SaldoTexto
+        </span>
+        <span class="block text-[10px] uppercase tracking-wide text-faint">@V.Estado</span>
+    </span>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public ClienteVista V { get; set; } = default!;
+    [Parameter] public EventCallback<string> OnClick { get; set; }
+}

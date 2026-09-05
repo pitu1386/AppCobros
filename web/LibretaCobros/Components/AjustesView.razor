@@ -1,0 +1,138 @@
+@inject ICobrosDataService Data
+@inject IJSRuntime JS
+
+<div class="p-4 space-y-4 max-w-md mx-auto">
+    <h1 class="font-cond font-extrabold text-2xl">Ajustes</h1>
+
+    <!-- Grupos -->
+    <section class="rounded-xl bg-surface border border-line p-4 space-y-3">
+        <div class="text-xs font-bold uppercase tracking-wide text-faint">Grupos y cuotas</div>
+        @foreach (var g in _grupos)
+        {
+            <div class="flex gap-2 items-center">
+                <input @bind="g.Nombre" class="flex-1 min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
+                <input @bind="g.Cuota" type="number" class="w-28 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-cond font-bold" />
+                <button @onclick="() => _grupos.Remove(g)" class="text-faint hover:text-dangertext px-1">✕</button>
+            </div>
+        }
+        <button @onclick='() => _grupos.Add(new Grupo { Nombre = "Nuevo grupo" })'
+                class="text-sm text-brandtext font-semibold">+ Agregar grupo</button>
+    </section>
+
+    <!-- Anexo -->
+    <section class="rounded-xl bg-surface border border-line p-4">
+        <label class="text-xs font-bold uppercase tracking-wide text-faint">Valor de cada anexo</label>
+        <input @bind="_cfg.Anexo" type="number" class="w-full mt-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-cond font-bold" />
+    </section>
+
+    <!-- Cotización euro -->
+    <section class="rounded-xl bg-surface border border-line p-4">
+        <label class="text-xs font-bold uppercase tracking-wide text-faint">Cotización del euro (pesos por €)</label>
+        <input @bind="_cfg.CotizacionEuro" type="number" class="w-full mt-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-cond font-bold" />
+        <p class="text-xs text-faint mt-1">0 = oculta la métrica en euros.</p>
+    </section>
+
+    <!-- Orden por defecto -->
+    <section class="rounded-xl bg-surface border border-line p-4">
+        <label class="text-xs font-bold uppercase tracking-wide text-faint">Orden de las listas</label>
+        <select @bind="_cfg.Orden" class="w-full mt-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm">
+            <option value="deuda">Por deuda (mayor primero)</option>
+            <option value="nombre">Por nombre (A–Z)</option>
+        </select>
+    </section>
+
+    <!-- Enlace de pago -->
+    <section class="rounded-xl bg-surface border border-line p-4">
+        <label class="text-xs font-bold uppercase tracking-wide text-faint">Datos / enlace de pago</label>
+        <textarea @bind="_cfg.EnlacePago" rows="3" class="w-full mt-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm"></textarea>
+    </section>
+
+    <!-- Plantillas -->
+    <section class="rounded-xl bg-surface border border-line p-4 space-y-3">
+        <div class="text-xs font-bold uppercase tracking-wide text-faint">Mensajes de WhatsApp</div>
+        <div>
+            <label class="text-xs text-muted">Confirmación de pago — {nombre} {pago} {fecha} {saldo} {detalle}</label>
+            <textarea @bind="_cfg.Plantilla" rows="4" class="w-full mt-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs"></textarea>
+        </div>
+        <div>
+            <label class="text-xs text-muted">Recordatorio de deuda — {nombre} {detalle} {saldo} {enlace_pago}</label>
+            <textarea @bind="_cfg.PlantillaRec" rows="4" class="w-full mt-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs"></textarea>
+        </div>
+    </section>
+
+    <!-- Conceptos de cargo -->
+    <section class="rounded-xl bg-surface border border-line p-4 space-y-2">
+        <div class="text-xs font-bold uppercase tracking-wide text-faint">Cargos frecuentes</div>
+        @foreach (var cc in _conceptos)
+        {
+            <div class="flex gap-2 items-center">
+                <input @bind="cc.Nombre" class="flex-1 min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
+                <input @bind="cc.Monto" type="number" class="w-24 rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
+                <label class="flex items-center gap-1 text-[11px] text-muted shrink-0" title="Marca el mes como facturado">
+                    <input type="checkbox" @bind="cc.EsCuotaMensual" class="w-3.5 h-3.5 accent-brand" />mes
+                </label>
+                <button @onclick="() => _conceptos.Remove(cc)" class="text-faint hover:text-dangertext px-1">✕</button>
+            </div>
+        }
+        <button @onclick='() => _conceptos.Add(new ConceptoCargo { Nombre = "Nuevo concepto" })'
+                class="text-sm text-brandtext font-semibold">+ Agregar concepto</button>
+    </section>
+
+    @if (!string.IsNullOrEmpty(_msg)) { <p class="text-sm text-oktext font-semibold">@_msg</p> }
+
+    <button @onclick="Guardar" disabled="@_busy"
+            class="w-full rounded-xl bg-brand text-white font-bold py-3 text-sm disabled:opacity-50">
+        @(_busy ? "Guardando…" : "Guardar ajustes")
+    </button>
+
+    <div class="grid grid-cols-2 gap-2">
+        <button @onclick="() => OnOpenPapelera.InvokeAsync()" class="rounded-xl border border-line py-2.5 text-sm font-semibold">🗑 Papelera (@Data.Papelera.Count)</button>
+        <button @onclick="() => OnOpenDashboard.InvokeAsync()" class="rounded-xl border border-line py-2.5 text-sm font-semibold">📊 Dashboard</button>
+    </div>
+
+    <div class="pt-2 border-t border-line space-y-2">
+        <p class="text-xs text-faint">Versión @AppInfo.Version · @Data.SessionEmail</p>
+        <button @onclick='() => JS.InvokeVoidAsync("forceAppUpdate")' class="text-sm text-brandtext font-semibold">Actualizar app (borrar caché)</button>
+        <button @onclick="() => OnLogout.InvokeAsync()" class="block text-sm text-dangertext font-semibold">Cerrar sesión</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnOpenPapelera { get; set; }
+    [Parameter] public EventCallback OnOpenDashboard { get; set; }
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    private Config _cfg = new();
+    private List<Grupo> _grupos = new();
+    private List<ConceptoCargo> _conceptos = new();
+    private bool _busy;
+    private string? _msg;
+
+    protected override void OnInitialized()
+    {
+        var src = Data.Config;
+        _cfg = new Config
+        {
+            Anexo = src.Anexo, Plantilla = src.Plantilla, PlantillaRec = src.PlantillaRec,
+            EnlacePago = src.EnlacePago, Orden = src.Orden, CotizacionEuro = src.CotizacionEuro
+        };
+        _grupos = Data.Grupos.Select(g => new Grupo
+        {
+            Id = g.Id, Nombre = g.Nombre, Cuota = g.Cuota,
+            HistorialCuota = new List<CuotaHistorialEntry>(g.HistorialCuota)
+        }).ToList();
+        _conceptos = src.ConceptosCargo.Select(c => new ConceptoCargo
+        {
+            Nombre = c.Nombre, Monto = c.Monto, EsCuotaMensual = c.EsCuotaMensual
+        }).ToList();
+    }
+
+    private async Task Guardar()
+    {
+        _busy = true; _msg = null;
+        _cfg.ConceptosCargo = _conceptos.Where(c => !string.IsNullOrWhiteSpace(c.Nombre)).ToList();
+        var ok = await Data.SaveAjustesAsync(_cfg, _grupos.Where(g => !string.IsNullOrWhiteSpace(g.Nombre)).ToList());
+        _busy = false;
+        if (ok) { _msg = "Ajustes guardados ✓"; OnInitialized(); }
+    }
+}

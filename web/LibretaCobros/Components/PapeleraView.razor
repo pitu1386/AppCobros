@@ -1,0 +1,63 @@
+@inject ICobrosDataService Data
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="p-4 space-y-3 max-w-md mx-auto">
+    <div class="flex items-center justify-between">
+        <button @onclick="() => OnBack.InvokeAsync()" class="text-sm text-brandtext font-semibold">← Ajustes</button>
+        <h1 class="font-cond font-extrabold text-lg">Papelera</h1>
+        <span class="w-16"></span>
+    </div>
+
+    <p class="text-xs text-muted">
+        Los movimientos borrados se guardan @CobrosHelper.DiasRetencionPapelera días y después se descartan solos.
+    </p>
+
+    @if (Data.Papelera.Count == 0)
+    {
+        <p class="text-center text-sm text-muted py-8">Papelera vacía.</p>
+    }
+    else
+    {
+        <button @onclick="Vaciar" class="text-sm text-dangertext font-semibold">Vaciar papelera (@Data.Papelera.Count)</button>
+        <div class="rounded-xl bg-surface border border-line divide-y divide-line overflow-hidden">
+            @foreach (var e in Data.Papelera.OrderByDescending(x => x.EliminadoEl))
+            {
+                <div class="px-4 py-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="font-semibold">@e.Resumen</span>
+                        <span class="font-cond font-bold">@e.MontoTexto</span>
+                    </div>
+                    <div class="text-xs text-faint mt-0.5">@e.Detalle</div>
+                    <div class="flex gap-3 mt-2">
+                        <button @onclick="() => Restaurar(e)" class="text-xs text-oktext font-bold">Restaurar</button>
+                        <button @onclick="() => Descartar(e)" class="text-xs text-dangertext font-bold">Eliminar definitivo</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    protected override void OnInitialized() => Data.OnChange += OnChanged;
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private Task Restaurar(MovimientoEliminado e) => Data.RestaurarDePapeleraAsync(e.Id);
+
+    private async Task Descartar(MovimientoEliminado e)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "Este movimiento se borra para siempre. ¿Confirmás?")) return;
+        await Data.DescartarDePapeleraAsync(e.Id);
+    }
+
+    private async Task Vaciar()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Se borran para siempre {Data.Papelera.Count} movimiento(s). ¿Confirmás?")) return;
+        await Data.VaciarPapeleraAsync();
+    }
+
+    public void Dispose() => Data.OnChange -= OnChanged;
+}

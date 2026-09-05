@@ -1,0 +1,108 @@
+@if (IsOpen)
+{
+    <div class="fixed inset-0 z-70 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" @onclick="Close">
+        <div class="bg-surface w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 animate-in" @onclick:stopPropagation="true">
+            <h2 class="font-cond font-extrabold text-xl mb-4">Agregar cargo</h2>
+
+            @if (Conceptos is { Count: > 0 })
+            {
+                <label class="text-xs font-bold uppercase tracking-wide text-faint">Concepto</label>
+                <select @bind="_sel" @bind:after="OnSelChanged"
+                        class="w-full mt-1 mb-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm">
+                    @for (var i = 0; i < Conceptos.Count; i++)
+                    {
+                        <option value="@i">@Conceptos[i].Etiqueta</option>
+                    }
+                    <option value="-1">✎ Otro (escribir)</option>
+                </select>
+            }
+
+            @if (Conceptos is not { Count: > 0 } || _sel < 0)
+            {
+                <input @bind="_concepto" placeholder="Concepto del cargo"
+                       class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none focus:border-brand" />
+            }
+
+            <label class="text-xs font-bold uppercase tracking-wide text-faint mt-3 block">Monto</label>
+            <input @bind="_monto" type="number" inputmode="numeric"
+                   class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-3 text-lg font-cond font-bold outline-none focus:border-brand" />
+
+            <label class="text-xs font-bold uppercase tracking-wide text-faint mt-3 block">Fecha</label>
+            <input @bind="_fecha" type="date"
+                   class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none focus:border-brand" />
+
+            <label class="flex items-center gap-2 mt-3 text-sm">
+                <input type="checkbox" @bind="_esCuotaMensual" class="w-4 h-4 accent-brand" />
+                Marca el mes como facturado (como una cuota mensual)
+            </label>
+
+            @if (!string.IsNullOrEmpty(_error)) { <p class="text-xs text-dangertext mt-2">@_error</p> }
+
+            <div class="flex gap-2 mt-5">
+                <button @onclick="Close" class="flex-1 rounded-xl border border-line py-2.5 text-sm font-semibold">Cancelar</button>
+                <button @onclick="Confirm" disabled="@_busy" class="flex-1 rounded-xl bg-brand text-white py-2.5 text-sm font-bold disabled:opacity-50">
+                    @(_busy ? "Guardando…" : "Agregar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public List<ConceptoCargo>? Conceptos { get; set; }
+    /// <summary>(concepto, monto, fechaISO, esCuotaMensual)</summary>
+    [Parameter] public EventCallback<(string, double, string, bool)> OnConfirm { get; set; }
+
+    private int _sel;
+    private string _concepto = "";
+    private double _monto;
+    private DateOnly _fecha = DateOnly.FromDateTime(DateTime.Now);
+    private bool _esCuotaMensual;
+    private string? _error;
+    private bool _busy;
+    private bool _shown;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !_shown)
+        {
+            _shown = true;
+            _sel = Conceptos is { Count: > 0 } ? 0 : -1;
+            _fecha = DateOnly.FromDateTime(DateTime.Now);
+            _monto = 0; _concepto = ""; _esCuotaMensual = false; _error = null;
+            OnSelChanged();
+        }
+        if (!IsOpen) _shown = false;
+    }
+
+    private void OnSelChanged()
+    {
+        if (Conceptos is { Count: > 0 } && _sel >= 0 && _sel < Conceptos.Count)
+        {
+            var c = Conceptos[_sel];
+            _concepto = c.Nombre;
+            if (c.Monto > 0) _monto = c.Monto;
+            _esCuotaMensual = c.EsCuotaMensual;
+        }
+        else _concepto = "";
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task Confirm()
+    {
+        var concepto = _concepto.Trim();
+        if (string.IsNullOrWhiteSpace(concepto)) { _error = "Falta el concepto."; return; }
+        if (_monto <= 0) { _error = "Ingresá un monto mayor a cero."; return; }
+        _busy = true;
+        await OnConfirm.InvokeAsync((concepto, _monto, _fecha.ToString("yyyy-MM-dd"), _esCuotaMensual));
+        _busy = false;
+        await Close();
+    }
+}

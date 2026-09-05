@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <script>
+        // Tema visual. Se aplica antes de pintar para evitar el parpadeo al cargar.
+        (function () {
+            var KEY = 'lc-theme';
+            var colors = { light: '#f7f7f8', dark: '#0b0b0c' };
+            function apply(theme) {
+                var dark = theme === 'dark';
+                document.documentElement.classList.toggle('dark', dark);
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', dark ? colors.dark : colors.light);
+            }
+            var stored = null;
+            try { stored = localStorage.getItem(KEY); } catch (e) { }
+            var current = stored === 'dark' ? 'dark' : 'light';
+            window.lcTheme = {
+                get: function () { return current; },
+                set: function (theme) {
+                    current = theme === 'dark' ? 'dark' : 'light';
+                    try { localStorage.setItem(KEY, current); } catch (e) { }
+                    apply(current);
+                }
+            };
+            document.addEventListener('DOMContentLoaded', function () { apply(current); });
+            apply(current);
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Libreta de Cobros</title>
+    <base href="/" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Cobros" />
+    <meta name="theme-color" content="#f7f7f8" />
+    <link href="manifest.webmanifest" rel="manifest" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind compilado con la CLI (npm run build:css). Los tokens de color viven en css/app.css -->
+    <link rel="stylesheet" href="css/tailwind.css" />
+    <link rel="stylesheet" href="css/app.css" />
+
+    <!-- Cliente Supabase solo para Realtime (los datos van por REST desde C#) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+</head>
+
+<body class="bg-app text-ink antialiased min-h-screen">
+    <div id="app">
+        <div class="fixed inset-0 bg-app flex flex-col items-center justify-center p-6 text-center z-50">
+            <div class="w-16 h-16 mb-5 rounded-2xl bg-brand/10 flex items-center justify-center">
+                <span class="text-3xl">🧾</span>
+            </div>
+            <h1 class="font-cond font-extrabold text-[28px] leading-none tracking-wide text-ink mb-1.5">LIBRETA DE COBROS</h1>
+            <div class="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mt-6"></div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        Ocurrió un error inesperado.
+        <a href="." class="reload">Recargar</a>
+        <span class="dismiss">🗙</span>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then(reg => {
+                reg.update();
+                reg.onupdatefound = () => {
+                    const w = reg.installing;
+                    if (w) {
+                        w.onstatechange = () => {
+                            if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                                window.location.reload();
+                            }
+                        };
+                    }
+                };
+            });
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) { refreshing = true; window.location.reload(); }
+            });
+        }
+
+        window.forceAppUpdate = async () => {
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (const reg of regs) await reg.unregister();
+            }
+            window.location.reload();
+        };
+
+        window.blazorLocalStorage = {
+            get: (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } },
+            set: (key, value) => { try { localStorage.setItem(key, value); } catch (e) { } },
+            remove: (key) => { try { localStorage.removeItem(key); } catch (e) { } }
+        };
+
+        // Abre WhatsApp con el teléfono y el mensaje ya cargados.
+        window.lcWhatsApp = (phone, message) => {
+            const digits = (phone || '').replace(/\D/g, '');
+            if (!digits) return;
+            window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(message || ''), '_blank');
+        };
+
+        window.lcCopy = async (text) => {
+            try { await navigator.clipboard.writeText(text); return true; } catch (e) { return false; }
+        };
+
+        // Puente Realtime: un cambio en cualquier tabla avisa a C# (CobrosDataService.OnCloudChange)
+        // para que vuelva a leer esa tabla. Al volver a la pestaña se fuerza un refresco completo.
+        window.lcRealtime = (function () {
+            let client = null, channel = null, dotnet = null, timers = {}, hooked = false;
+
+            function notify(table) {
+                if (!dotnet) return;
+                clearTimeout(timers[table]);
+                timers[table] = setTimeout(() => {
+                    dotnet.invokeMethodAsync('OnCloudChange', table).catch(() => { });
+                }, 400);
+            }
+            function status(connected) {
+                if (dotnet) dotnet.invokeMethodAsync('OnRealtimeStatus', connected).catch(() => { });
+            }
+
+            return {
+                start: function (url, anonKey, accessToken, dotnetRef) {
+                    dotnet = dotnetRef;
+                    if (!hooked) {
+                        hooked = true;
+                        document.addEventListener('visibilitychange', () => {
+                            if (document.visibilityState === 'visible' && dotnet) {
+                                dotnet.invokeMethodAsync('OnAppResumed').catch(() => { });
+                            }
+                        });
+                        window.addEventListener('online', () => {
+                            if (dotnet) dotnet.invokeMethodAsync('OnAppResumed').catch(() => { });
+                        });
+                    }
+                    if (!window.supabase || !window.supabase.createClient) { status(false); return false; }
+                    this.stop();
+                    client = window.supabase.createClient(url, anonKey, {
+                        auth: { persistSession: false, autoRefreshToken: false },
+                        realtime: { params: { eventsPerSecond: 5 } }
+                    });
+                    if (accessToken) client.realtime.setAuth(accessToken);
+                    channel = client.channel('libreta-cobros')
+                        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => notify(payload.table))
+                        .subscribe((state) => status(state === 'SUBSCRIBED'));
+                    return true;
+                },
+                setAuth: function (accessToken) {
+                    if (client && accessToken) client.realtime.setAuth(accessToken);
+                },
+                stop: function () {
+                    if (channel && client) { try { client.removeChannel(channel); } catch (e) { } }
+                    channel = null; client = null; status(false);
+                }
+            };
+        })();
+    </script>
+</body>
+
+</html>

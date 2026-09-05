@@ -1,0 +1,93 @@
+@inject ICobrosDataService Data
+@inject ThemeService Theme
+@implements IDisposable
+
+<header class="flex items-center justify-between px-4 py-3 border-b border-line bg-surface sticky top-0 z-40">
+    <button class="flex items-center gap-2" @onclick='() => Go("inicio")'>
+        <span class="text-xl">🧾</span>
+        <span class="font-cond font-extrabold text-lg tracking-wide">LIBRETA DE COBROS</span>
+    </button>
+    <div class="flex items-center gap-3">
+        <span class="text-[11px] @(Data.IsRealtimeConnected ? "text-oktext" : "text-faint")" title="@SyncTitle">
+            @(Data.IsRealtimeConnected ? "● en vivo" : "○ offline")
+        </span>
+        <button @onclick="Theme.ToggleAsync" class="text-base" title="Tema">@(Theme.IsDark ? "☀️" : "🌙")</button>
+    </div>
+</header>
+
+<main class="flex-1 overflow-y-auto">
+    @switch (_view)
+    {
+        case "inicio":    <InicioView OnOpenCliente="OpenCliente" OnReclamarMasivo='() => Go("reclamar")' /> break;
+        case "clientes":  <ClientesView OnOpenCliente="OpenCliente" OnNuevoCliente="() => OpenForm(null)" /> break;
+        case "ajustes":   <AjustesView OnOpenPapelera='() => Go("papelera")' OnOpenDashboard='() => Go("dashboard")' OnLogout="Data.LogoutAsync" /> break;
+        case "dashboard": <DashboardView OnBack='() => Go("ajustes")' OnOpenCliente="OpenCliente" /> break;
+        case "papelera":  <PapeleraView OnBack='() => Go("ajustes")' /> break;
+        case "reclamar":  <ReclamarMasivoView OnBack='() => Go("inicio")' /> break;
+        case "cliente":   <ClienteDetalleView ClienteId="@_clienteId" OnBack="BackFromCliente" OnEdit="() => OpenForm(_clienteId)" /> break;
+        case "form":      <ClienteFormView ClienteId="@_formClienteId" OnDone="DoneForm" OnCancel="CancelForm" /> break;
+    }
+</main>
+
+@if (_view is "inicio" or "clientes" or "ajustes")
+{
+    <nav class="flex border-t border-line bg-surface">
+        @foreach (var (key, icon, label) in Tabs)
+        {
+            <button @onclick='() => Go(key)'
+                    class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold @(_view == key ? "text-brandtext" : "text-faint")">
+                <span class="text-lg">@icon</span>@label
+            </button>
+        }
+    </nav>
+}
+
+@code {
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    private static readonly (string, string, string)[] Tabs =
+        { ("inicio", "🏠", "Inicio"), ("clientes", "👥", "Clientes"), ("ajustes", "⚙️", "Ajustes") };
+
+    private string _view = "inicio";
+    private string _clienteId = "";
+    private string? _formClienteId;
+    private string _returnTo = "inicio";
+
+    private string SyncTitle => Data.LastSyncUtc is { } t
+        ? $"Última sincronización: {t.ToLocalTime():dd/MM HH:mm:ss}" : "Sin sincronizar todavía";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.OnChange += OnStateChanged;
+        await Theme.InitializeAsync();
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void Go(string view) => _view = view;
+
+    private void OpenCliente(string id)
+    {
+        _returnTo = _view is "cliente" or "form" ? _returnTo : _view;
+        _clienteId = id;
+        _view = "cliente";
+    }
+
+    private void BackFromCliente() => _view = _returnTo;
+
+    private void OpenForm(string? clienteId)
+    {
+        _formClienteId = clienteId;
+        _view = "form";
+    }
+
+    private void DoneForm(string clienteId)
+    {
+        _clienteId = clienteId;
+        _view = "cliente";
+    }
+
+    private void CancelForm() => _view = string.IsNullOrEmpty(_formClienteId) ? _returnTo : "cliente";
+
+    public void Dispose() => Theme.OnChange -= OnStateChanged;
+}

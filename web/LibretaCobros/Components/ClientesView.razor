@@ -1,0 +1,109 @@
+@inject ICobrosDataService Data
+@implements IDisposable
+
+<div class="p-4 space-y-3">
+    <div class="flex items-center gap-2">
+        <input @bind="_search" @bind:event="oninput" placeholder="Buscar cliente…"
+               class="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none focus:border-brand" />
+        <button @onclick="() => OnNuevoCliente.InvokeAsync()"
+                class="shrink-0 rounded-xl bg-brand text-white font-bold px-4 py-2.5 text-sm">+ Nuevo</button>
+    </div>
+
+    <div class="flex gap-2 flex-wrap text-xs">
+        <button @onclick="CycleOrden" class="rounded-full border border-line px-3 py-1.5 font-semibold">
+            @(_orden == "nombre" ? "Nombre A–Z" : "Saldo ↓")
+        </button>
+        <button @onclick="CycleEstado" class="rounded-full border border-line px-3 py-1.5 font-semibold">
+            @(_estado switch { "deuda" => "Con deuda", "aldia" => "Al día", "afavor" => "A favor", _ => "Todos" })
+        </button>
+        <select @bind="_grupoId" class="rounded-full border border-line bg-surface px-3 py-1.5 font-semibold">
+            <option value="">Todos los grupos</option>
+            @foreach (var g in Data.Grupos) { <option value="@g.Id">@g.Nombre</option> }
+            <option value="__none">Sin grupo</option>
+        </select>
+    </div>
+
+    @foreach (var grupo in Grupos())
+    {
+        <div class="rounded-xl bg-surface border border-line overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-2.5 bg-well">
+                <span class="text-sm font-bold">@grupo.Titulo</span>
+                <span class="text-[11px] text-muted">@grupo.Subtitulo</span>
+            </div>
+            <div class="divide-y divide-line">
+                @foreach (var v in grupo.Items)
+                {
+                    <ClienteRow V="v" OnClick="id => OnOpenCliente.InvokeAsync(id)" />
+                }
+            </div>
+        </div>
+    }
+    @if (!Grupos().Any())
+    {
+        <p class="text-center text-sm text-muted py-8">Sin resultados.</p>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnOpenCliente { get; set; }
+    [Parameter] public EventCallback OnNuevoCliente { get; set; }
+
+    private string _search = "";
+    private string _estado = "todos";
+    private string _orden = "saldo";
+    private string _grupoId = "";
+
+    private string MesKey => ClienteVista.MesActual;
+
+    protected override void OnInitialized() => Data.OnChange += OnChanged;
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void CycleOrden() => _orden = _orden == "saldo" ? "nombre" : "saldo";
+    private void CycleEstado() => _estado = _estado switch { "todos" => "deuda", "deuda" => "aldia", "aldia" => "afavor", _ => "todos" };
+
+    private record GrupoLista(string Titulo, string Subtitulo, List<ClienteVista> Items);
+
+    private bool CumpleEstado(ClienteVista v) => _estado switch
+    {
+        "deuda" => v.Saldo > 0,
+        "aldia" => Math.Abs(v.Saldo) < 0.01,
+        "afavor" => v.Saldo < 0,
+        _ => true
+    };
+
+    private IEnumerable<ClienteVista> Ordenar(IEnumerable<ClienteVista> xs) => _orden == "nombre"
+        ? xs.OrderBy(v => v.Cliente.Nombre, StringComparer.OrdinalIgnoreCase)
+        : xs.OrderByDescending(v => v.SaldoAbs);
+
+    private ClienteVista V(Cliente c) => new(c, Data.Grupos, Data.Config, MesKey);
+
+    private bool MatchSearch(Cliente c) =>
+        string.IsNullOrWhiteSpace(_search) || c.Nombre.Contains(_search, StringComparison.OrdinalIgnoreCase);
+
+    private IEnumerable<GrupoLista> Grupos()
+    {
+        var activos = Data.Clientes.Where(c => !c.Archivado && MatchSearch(c)).ToList();
+        var hayFiltros = !string.IsNullOrWhiteSpace(_search) || _estado != "todos" || _grupoId != "";
+
+        foreach (var g in Data.Grupos)
+        {
+            if (_grupoId != "" && _grupoId != g.Id) continue;
+            var items = Ordenar(activos.Where(c => c.GrupoId == g.Id).Select(V).Where(CumpleEstado)).ToList();
+            if (items.Count > 0 || !hayFiltros)
+                yield return new(g.Nombre, $"cuota {CobrosHelper.FormatMoney(g.Cuota)} · {items.Count}", items);
+        }
+
+        if (_grupoId is "" or "__none")
+        {
+            var sinGrupo = Ordenar(activos.Where(c => Data.GetGrupo(c.GrupoId) == null).Select(V).Where(CumpleEstado)).ToList();
+            if (sinGrupo.Count > 0) yield return new("Sin grupo", $"{sinGrupo.Count} cliente(s)", sinGrupo);
+        }
+
+        var archivados = Data.Clientes.Where(c => c.Archivado && MatchSearch(c));
+        if (_grupoId != "" && _grupoId != "__none") archivados = archivados.Where(c => c.GrupoId == _grupoId);
+        var arch = Ordenar(archivados.Select(V)).ToList();
+        if (arch.Count > 0) yield return new("Archivados", $"{arch.Count} cliente(s)", arch);
+    }
+
+    public void Dispose() => Data.OnChange -= OnChanged;
+}

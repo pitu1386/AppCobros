@@ -1,0 +1,92 @@
+@inject ICobrosDataService Data
+
+<div class="p-4 max-w-md mx-auto">
+    <div class="flex items-center justify-between mb-4">
+        <button @onclick="() => OnCancel.InvokeAsync()" class="text-sm text-brandtext font-semibold">← Cancelar</button>
+        <h1 class="font-cond font-extrabold text-lg">@(_editing ? "Editar cliente" : "Nuevo cliente")</h1>
+        <span class="w-16"></span>
+    </div>
+
+    <div class="space-y-3">
+        <div>
+            <label class="text-xs font-bold uppercase tracking-wide text-faint">Nombre</label>
+            <input @bind="_nombre" class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-3 text-sm outline-none focus:border-brand" />
+        </div>
+        <div>
+            <label class="text-xs font-bold uppercase tracking-wide text-faint">Teléfono</label>
+            <input @bind="_telefono" type="tel" inputmode="tel" placeholder="+54 9 351 ..."
+                   class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-3 text-sm outline-none focus:border-brand" />
+        </div>
+        <div>
+            <label class="text-xs font-bold uppercase tracking-wide text-faint">Grupo</label>
+            <select @bind="_grupoId" class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
+                <option value="">Sin grupo</option>
+                @foreach (var g in Data.Grupos) { <option value="@g.Id">@g.Nombre — @CobrosHelper.FormatMoney(g.Cuota)</option> }
+            </select>
+        </div>
+        <div>
+            <label class="text-xs font-bold uppercase tracking-wide text-faint">Anexos</label>
+            <input @bind="_anexos" type="number" min="0"
+                   class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-3 text-sm outline-none focus:border-brand" />
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" @bind="_mesVencido" class="w-4 h-4 accent-brand" />
+            Paga a mes vencido
+        </label>
+
+        <div class="rounded-xl bg-brandbg text-brandtext text-sm px-4 py-3 font-semibold">
+            Cuota mensual resultante: @CobrosHelper.FormatMoney(CuotaCalculada())
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error)) { <p class="text-xs text-dangertext">@_error</p> }
+
+        <button @onclick="Guardar" disabled="@_busy"
+                class="w-full rounded-xl bg-brand text-white font-bold py-3 text-sm disabled:opacity-50">
+            @(_busy ? "Guardando…" : "Guardar")
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? ClienteId { get; set; }
+    [Parameter] public EventCallback<string> OnDone { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool _editing;
+    private string _nombre = "", _telefono = "", _grupoId = "";
+    private int _anexos;
+    private bool _mesVencido, _busy;
+    private string? _error;
+
+    protected override void OnParametersSet()
+    {
+        _editing = !string.IsNullOrEmpty(ClienteId);
+        if (_editing && Data.GetCliente(ClienteId!) is { } c)
+        {
+            _nombre = c.Nombre; _telefono = c.Telefono; _grupoId = c.GrupoId;
+            _anexos = c.Anexos; _mesVencido = c.MesVencido;
+        }
+        else
+        {
+            _grupoId = Data.Grupos.FirstOrDefault()?.Id ?? "";
+        }
+    }
+
+    private double CuotaCalculada() =>
+        (Data.GetGrupo(_grupoId)?.Cuota ?? 0) + (_anexos * Data.Config.Anexo);
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(_nombre)) { _error = "Falta el nombre."; return; }
+        _busy = true;
+        var c = (_editing ? Data.GetCliente(ClienteId!) : null) ?? new Cliente();
+        c.Nombre = _nombre.Trim();
+        c.Telefono = _telefono.Trim();
+        c.GrupoId = _grupoId;
+        c.Anexos = _anexos;
+        c.MesVencido = _mesVencido;
+        await Data.SaveClienteAsync(c);
+        _busy = false;
+        await OnDone.InvokeAsync(c.Id);
+    }
+}

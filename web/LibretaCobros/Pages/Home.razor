@@ -1,0 +1,73 @@
+@page "/"
+@inject ICobrosDataService Data
+@implements IDisposable
+
+<PageTitle>Libreta de Cobros</PageTitle>
+
+@if (!_loaded)
+{
+    <div class="flex-1 flex flex-col items-center justify-center py-20 text-center">
+        <div class="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-xs text-muted">Cargando…</p>
+    </div>
+}
+else if (!Data.IsAuthenticated)
+{
+    <LoginView />
+}
+else
+{
+    <AppShell />
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="fixed left-1/2 -translate-x-1/2 bottom-6 z-70 w-[calc(100%-2rem)] max-w-md animate-in">
+        <div class="bg-surface border-2 border-danger/60 rounded-xl shadow-2xl p-3.5 flex items-start gap-3 text-xs">
+            <span class="text-lg leading-none">⚠️</span>
+            <div class="flex-1 min-w-0">
+                <div class="font-extrabold text-dangertext mb-0.5">No se pudo guardar en la nube</div>
+                <div class="text-ink2 leading-relaxed">@_error</div>
+            </div>
+            <button type="button" @onclick="() => _error = null" class="text-muted hover:text-ink font-bold px-1">✕</button>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _loaded;
+    private string? _error;
+    private CancellationTokenSource? _errorCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Data.OnChange += OnChanged;
+        Data.OnError += ShowError;
+        await Data.InitializeAsync();
+        _loaded = true;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void ShowError(string message)
+    {
+        _error = message;
+        _errorCts?.Cancel();
+        _errorCts = new CancellationTokenSource();
+        var token = _errorCts.Token;
+        _ = Task.Delay(8000, token).ContinueWith(_ =>
+        {
+            if (token.IsCancellationRequested) return;
+            _error = null;
+            InvokeAsync(StateHasChanged);
+        }, TaskScheduler.Default);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Data.OnChange -= OnChanged;
+        Data.OnError -= ShowError;
+        _errorCts?.Cancel();
+    }
+}

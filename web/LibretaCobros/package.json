@@ -1,0 +1,13 @@
+{
+  "name": "libreta-cobros-css",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Compilación de Tailwind CSS para Libreta de Cobros",
+  "scripts": {
+    "build:css": "tailwindcss -i ./Styles/tailwind.input.css -o ./wwwroot/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./Styles/tailwind.input.css -o ./wwwroot/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

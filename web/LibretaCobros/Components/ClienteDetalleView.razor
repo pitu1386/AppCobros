@@ -1,0 +1,195 @@
+@inject ICobrosDataService Data
+@inject IJSRuntime JS
+@implements IDisposable
+
+@if (_c is null)
+{
+    <div class="p-6 text-center text-sm text-muted">
+        <button @onclick="() => OnBack.InvokeAsync()" class="text-brandtext font-semibold">← Volver</button>
+        <p class="mt-4">Cliente no encontrado.</p>
+    </div>
+}
+else
+{
+    <div class="bg-hero text-herotext px-4 pt-3 pb-5">
+        <div class="flex items-center justify-between">
+            <button @onclick="() => OnBack.InvokeAsync()" class="text-sm text-heromuted">← Volver</button>
+            <button @onclick="() => OnEdit.InvokeAsync()" class="text-sm text-heromuted">Editar</button>
+        </div>
+        <h1 class="font-cond font-extrabold text-2xl mt-2">@_c.Nombre</h1>
+        <p class="text-xs text-heromuted mt-0.5">@Detalle()</p>
+        <div class="flex items-baseline gap-2 mt-3">
+            <span class="font-cond font-extrabold text-3xl @(_saldo > 0 ? "text-[#ffb0a5]" : _saldo < 0 ? "text-[#8fe6be]" : "")">
+                @CobrosHelper.FormatMoney(Math.Abs(_saldo))
+            </span>
+            <span class="text-[11px] uppercase tracking-widest text-heromuted">@Estado()</span>
+        </div>
+    </div>
+
+    <div class="p-4 space-y-3">
+        @if (!_c.Archivado)
+        {
+            <div class="grid grid-cols-2 gap-2">
+                <button @onclick="() => _showCobro = true" class="rounded-xl bg-brand text-white font-bold py-3 text-sm">💵 Registrar cobro</button>
+                <button @onclick="() => _showCargo = true" class="rounded-xl bg-surface border border-line font-bold py-3 text-sm">＋ Agregar cargo</button>
+            </div>
+            <button @onclick="EnviarRecordatorio" disabled="@_busy"
+                    class="w-full rounded-xl bg-[#25D366] text-white font-bold py-3 text-sm disabled:opacity-50">
+                📲 Enviar recordatorio por WhatsApp
+            </button>
+        }
+        else
+        {
+            <div class="rounded-xl bg-warnbg text-warntext text-sm px-4 py-3">
+                Cliente archivado. <button @onclick="Reactivar" class="font-bold underline">Reactivar</button>
+            </div>
+        }
+
+        @if (_pendientes.Count > 0)
+        {
+            <div class="rounded-xl bg-surface border border-line p-4">
+                <div class="text-xs font-bold uppercase tracking-wide text-faint mb-2">Pendiente</div>
+                <ul class="space-y-1.5 text-sm">
+                    @foreach (var p in _pendientes)
+                    {
+                        <li class="flex justify-between">
+                            <span>@p.Concepto</span>
+                            <span class="font-cond font-bold text-dangertext">@CobrosHelper.FormatMoney(p.Resto)</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="rounded-xl bg-surface border border-line overflow-hidden">
+            <div class="px-4 pt-4 pb-2 text-xs font-bold uppercase tracking-wide text-faint">Movimientos</div>
+            <div class="divide-y divide-line">
+                @foreach (var m in _movs)
+                {
+                    <div class="flex items-center gap-3 px-4 py-2.5 text-sm">
+                        <span class="w-1.5 h-8 rounded-full @(m.Tipo == "pago" ? "bg-ok" : "bg-danger/60")"></span>
+                        <span class="flex-1 min-w-0">
+                            <span class="block truncate">@m.Concepto</span>
+                            <span class="block text-xs text-faint">@m.FechaCorta</span>
+                        </span>
+                        <span class="font-cond font-bold @(m.Tipo == "pago" ? "text-oktext" : "text-ink2")">@m.MontoConSigno</span>
+                        <button @onclick="() => BorrarMovimiento(m)" class="text-faint hover:text-dangertext px-1" title="Borrar">🗑</button>
+                    </div>
+                }
+                @if (_movs.Count == 0) { <p class="px-4 py-4 text-sm text-muted">Sin movimientos.</p> }
+            </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+            @if (_c.Archivado)
+            {
+                <button @onclick="Borrar" class="flex-1 rounded-xl border border-danger/40 text-dangertext py-2.5 text-sm font-semibold">Eliminar definitivamente</button>
+            }
+            else
+            {
+                <button @onclick="Archivar" class="flex-1 rounded-xl border border-line py-2.5 text-sm font-semibold">Archivar cliente</button>
+            }
+        </div>
+    </div>
+
+    <RegistrarCobroModal @bind-IsOpen="_showCobro" MontoSugerido="MontoSugerido()" Pendientes="_pendientes" OnConfirm="OnCobroConfirm" />
+    <CargoManualModal @bind-IsOpen="_showCargo" Conceptos="Data.Config.ConceptosCargo" OnConfirm="OnCargoConfirm" />
+}
+
+@code {
+    [Parameter] public string ClienteId { get; set; } = "";
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+
+    private Cliente? _c;
+    private double _saldo, _exigible;
+    private List<Movimiento> _pendientes = new();
+    private List<Movimiento> _movs = new();
+    private bool _showCobro, _showCargo, _busy;
+
+    private string MesKey => ClienteVista.MesActual;
+
+    protected override void OnInitialized() => Data.OnChange += Reload;
+    protected override void OnParametersSet() => Reload();
+
+    private void Reload()
+    {
+        _c = Data.GetCliente(ClienteId);
+        if (_c is null) { InvokeAsync(StateHasChanged); return; }
+        _saldo = CobrosHelper.SaldoDe(_c);
+        _exigible = CobrosHelper.TotalDe(CobrosHelper.ExigiblesDe(_c, MesKey));
+        _pendientes = CobrosHelper.PendientesDe(_c);
+        _movs = _c.Movimientos.OrderByDescending(m => m.Fecha).ThenByDescending(m => m.Id).ToList();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string Estado() => _exigible > 0 ? "Debe" : _saldo > 0 ? "Mes en curso" : _saldo < 0 ? "A favor" : "Al día";
+
+    private string Detalle()
+    {
+        var g = Data.GetGrupo(_c!.GrupoId);
+        var cuota = CobrosHelper.CuotaDe(_c, Data.Grupos, Data.Config);
+        var s = $"{(g?.Nombre ?? "Sin grupo")} · cuota {CobrosHelper.FormatMoney(cuota)}";
+        if (_c.Anexos > 0) s += $" ({_c.Anexos} anexo{(_c.Anexos > 1 ? "s" : "")})";
+        if (_c.MesVencido) s += " · a mes vencido";
+        if (!string.IsNullOrEmpty(_c.Telefono)) s += $" · 📱 {_c.Telefono}";
+        return s;
+    }
+
+    private double MontoSugerido() => _exigible > 0 ? _exigible : Math.Max(_saldo, 0);
+
+    private async Task OnCobroConfirm((double monto, string fecha, string? concepto) r)
+    {
+        var cotiz = Data.Config.CotizacionEuro > 0 ? (double?)Data.Config.CotizacionEuro : null;
+        await Data.RegistrarPagoAsync(_c!.Id, r.monto, r.fecha, cotiz);
+    }
+
+    private async Task OnCargoConfirm((string concepto, double monto, string fecha, bool esCuota) r)
+    {
+        string? mes = r.esCuota ? r.fecha[..7] : null;
+        await Data.RegistrarCargoAsync(_c!.Id, r.concepto, r.monto, r.fecha, mes);
+    }
+
+    private async Task EnviarRecordatorio()
+    {
+        _busy = true;
+        var items = CobrosHelper.ExigiblesDe(_c!, MesKey);
+        var detalle = items.Count > 0
+            ? "Detalle pendiente:\n" + string.Join("\n", items.Select(p => $"• {p.Concepto}: {CobrosHelper.FormatMoney(p.Resto)}"))
+            : "No te quedan cuotas pendientes ✅";
+        var saldoTxt = _exigible > 0 ? CobrosHelper.FormatMoney(_exigible) : "$ 0 (cuenta al día ✅)";
+        var msg = Data.Config.PlantillaRec
+            .Replace("{nombre}", _c!.Nombre)
+            .Replace("{detalle}", detalle)
+            .Replace("{saldo}", saldoTxt)
+            .Replace("{enlace_pago}", Data.Config.EnlacePago);
+        await JS.InvokeVoidAsync("lcWhatsApp", _c.Telefono, msg);
+        await Data.MarcarReclamadoAsync(new[] { _c.Id }, CobrosHelper.HoyISO());
+        _busy = false;
+    }
+
+    private async Task BorrarMovimiento(Movimiento m)
+    {
+        if (!await Confirm($"¿Borrar este movimiento? Va a la papelera y podés restaurarlo {CobrosHelper.DiasRetencionPapelera} días.")) return;
+        await Data.EliminarMovimientoAsync(_c!.Id, m.Id);
+    }
+
+    private async Task Archivar()
+    {
+        if (!await Confirm("Se oculta de las listas activas y de los reclamos, pero se conserva todo el historial. ¿Archivar?")) return;
+        await Data.SetClienteArchivadoAsync(_c!.Id, true);
+    }
+
+    private Task Reactivar() => Data.SetClienteArchivadoAsync(_c!.Id, false);
+
+    private async Task Borrar()
+    {
+        if (!await Confirm("¿Eliminar este cliente y todo su historial para siempre? No se puede deshacer.")) return;
+        await Data.DeleteClienteAsync(_c!.Id);
+        await OnBack.InvokeAsync();
+    }
+
+    private async Task<bool> Confirm(string msg) => await JS.InvokeAsync<bool>("confirm", msg);
+
+    public void Dispose() => Data.OnChange -= Reload;
+}

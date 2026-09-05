@@ -1,0 +1,18 @@
+<div class="rounded-xl bg-surface border border-line p-3">
+    <div class="text-[10px] uppercase tracking-wide text-faint font-bold leading-tight">@Label</div>
+    <div class="font-cond font-extrabold text-lg mt-0.5 @ToneClass">@Value</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public string Tone { get; set; } = "";
+
+    private string ToneClass => Tone switch
+    {
+        "ok" => "text-oktext",
+        "danger" => "text-dangertext",
+        "warn" => "text-warntext",
+        _ => "text-ink"
+    };
+}

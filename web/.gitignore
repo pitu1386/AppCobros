@@ -1,0 +1,6 @@
+# Salida de dotnet publish (deploy.ps1)
+publish_output/
+
+# Datos reales exportados de la app y su migración: NO subir (tienen teléfonos e importes)
+export-actual.json
+migracion-datos.sql

@@ -1,0 +1,93 @@
+@if (IsOpen)
+{
+    <div class="fixed inset-0 z-70 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" @onclick="Close">
+        <div class="bg-surface w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 animate-in" @onclick:stopPropagation="true">
+            <h2 class="font-cond font-extrabold text-xl mb-4">Registrar cobro</h2>
+
+            @if (Pendientes is { Count: > 0 })
+            {
+                <label class="text-xs font-bold uppercase tracking-wide text-faint">Corresponde a</label>
+                <select @bind="_pendienteIdx" @bind:after="OnPendienteChanged"
+                        class="w-full mt-1 mb-3 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm">
+                    <option value="-1">Pago general / a cuenta</option>
+                    @for (var i = 0; i < Pendientes.Count; i++)
+                    {
+                        var p = Pendientes[i];
+                        <option value="@i">@p.Concepto — @CobrosHelper.FormatMoney(p.Resto)</option>
+                    }
+                </select>
+            }
+
+            <label class="text-xs font-bold uppercase tracking-wide text-faint">Monto</label>
+            <input @bind="_monto" type="number" inputmode="numeric"
+                   class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-3 text-lg font-cond font-bold outline-none focus:border-brand" />
+            @if (MontoSugerido > 0)
+            {
+                <p class="text-xs text-muted mt-1">Sugerido: @CobrosHelper.FormatMoney(MontoSugerido)</p>
+            }
+
+            <label class="text-xs font-bold uppercase tracking-wide text-faint mt-3 block">Fecha</label>
+            <input @bind="_fecha" type="date"
+                   class="w-full mt-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none focus:border-brand" />
+
+            @if (!string.IsNullOrEmpty(_error)) { <p class="text-xs text-dangertext mt-2">@_error</p> }
+
+            <div class="flex gap-2 mt-5">
+                <button @onclick="Close" class="flex-1 rounded-xl border border-line py-2.5 text-sm font-semibold">Cancelar</button>
+                <button @onclick="Confirm" disabled="@_busy" class="flex-1 rounded-xl bg-brand text-white py-2.5 text-sm font-bold disabled:opacity-50">
+                    @(_busy ? "Guardando…" : "Registrar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public double MontoSugerido { get; set; }
+    [Parameter] public List<Movimiento>? Pendientes { get; set; }
+    /// <summary>(monto, fechaISO, conceptoOpcional)</summary>
+    [Parameter] public EventCallback<(double, string, string?)> OnConfirm { get; set; }
+
+    private double _monto;
+    private DateOnly _fecha = DateOnly.FromDateTime(DateTime.Now);
+    private int _pendienteIdx = -1;
+    private string? _error;
+    private bool _busy;
+    private bool _shown;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !_shown)
+        {
+            _shown = true;
+            _monto = Math.Round(MontoSugerido);
+            _fecha = DateOnly.FromDateTime(DateTime.Now);
+            _pendienteIdx = -1;
+            _error = null;
+        }
+        if (!IsOpen) _shown = false;
+    }
+
+    private void OnPendienteChanged()
+    {
+        _monto = _pendienteIdx < 0 ? Math.Round(MontoSugerido) : Math.Round(Pendientes![_pendienteIdx].Resto);
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task Confirm()
+    {
+        if (_monto <= 0) { _error = "Ingresá un monto mayor a cero."; return; }
+        _busy = true;
+        string? concepto = _pendienteIdx >= 0 ? Pendientes![_pendienteIdx].Concepto : null;
+        await OnConfirm.InvokeAsync((_monto, _fecha.ToString("yyyy-MM-dd"), concepto));
+        _busy = false;
+        await Close();
+    }
+}

@@ -1,0 +1,45 @@
+@inject ICobrosDataService Data
+
+<div class="flex-1 flex flex-col justify-center px-6 py-12 max-w-sm w-full mx-auto">
+    <div class="text-center mb-8">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand/10 flex items-center justify-center text-3xl">🧾</div>
+        <h1 class="font-cond font-extrabold text-3xl tracking-wide text-ink">LIBRETA DE COBROS</h1>
+        <p class="text-sm text-muted mt-1">Entrá con tu cuenta para ver tus datos.</p>
+    </div>
+
+    <EditForm Model="this" OnValidSubmit="SubmitAsync" class="flex flex-col gap-3">
+        <label class="text-xs font-bold uppercase tracking-wide text-faint">Email</label>
+        <input @bind="_email" type="email" autocomplete="username" inputmode="email"
+               class="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm outline-none focus:border-brand" />
+
+        <label class="text-xs font-bold uppercase tracking-wide text-faint mt-2">Contraseña</label>
+        <input @bind="_password" type="password" autocomplete="current-password"
+               class="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm outline-none focus:border-brand" />
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="text-xs text-dangertext bg-dangerbg rounded-lg px-3 py-2 mt-1">@_error</div>
+        }
+
+        <button type="submit" disabled="@_busy"
+                class="mt-4 w-full rounded-xl bg-brand text-white font-bold py-3 text-sm disabled:opacity-50">
+            @(_busy ? "Entrando…" : "Entrar")
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+        var (ok, err) = await Data.LoginAsync(_email, _password);
+        _busy = false;
+        if (!ok) _error = err;
+    }
+}

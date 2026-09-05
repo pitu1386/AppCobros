@@ -1,0 +1,81 @@
+@inject ICobrosDataService Data
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="p-4 space-y-3 max-w-md mx-auto">
+    <div class="flex items-center justify-between">
+        <button @onclick="() => OnBack.InvokeAsync()" class="text-sm text-brandtext font-semibold">← Inicio</button>
+        <h1 class="font-cond font-extrabold text-lg">Reclamar deudas</h1>
+        <span class="w-16"></span>
+    </div>
+
+    @if (_items.Count == 0)
+    {
+        <p class="text-center text-sm text-muted py-8">No hay clientes con deuda exigible ✅</p>
+    }
+    else
+    {
+        <p class="text-xs text-muted">@_items.Count cliente(s) con deuda. Abrí el WhatsApp de cada uno; se marca como avisado hoy.</p>
+        <div class="rounded-xl bg-surface border border-line divide-y divide-line overflow-hidden">
+            @foreach (var it in _items)
+            {
+                var avisadoHoy = it.Cliente.UltRec == CobrosHelper.HoyISO();
+                <div class="flex items-center gap-3 px-4 py-3 text-sm">
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-semibold truncate">@it.Cliente.Nombre</span>
+                        <span class="block text-xs text-dangertext">Debe @CobrosHelper.FormatMoney(it.Exigible)</span>
+                    </span>
+                    @if (string.IsNullOrWhiteSpace(it.Cliente.Telefono))
+                    {
+                        <span class="text-xs text-faint">sin teléfono</span>
+                    }
+                    else
+                    {
+                        <button @onclick="() => Enviar(it)"
+                                class="rounded-lg @(avisadoHoy ? "bg-well text-muted" : "bg-[#25D366] text-white") font-bold px-3 py-2 text-xs">
+                            @(avisadoHoy ? "avisado hoy ✓" : "📲 Enviar")
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private List<ClienteVista> _items = new();
+    private string MesKey => ClienteVista.MesActual;
+
+    protected override void OnInitialized() => Data.OnChange += Reload;
+    protected override void OnParametersSet() => Reload();
+
+    private void Reload()
+    {
+        _items = Data.Clientes.Where(c => !c.Archivado)
+            .Select(c => new ClienteVista(c, Data.Grupos, Data.Config, MesKey))
+            .Where(v => v.Exigible > 0)
+            .OrderByDescending(v => v.Exigible)
+            .ToList();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Enviar(ClienteVista v)
+    {
+        var c = v.Cliente;
+        var items = CobrosHelper.ExigiblesDe(c, MesKey);
+        var detalle = items.Count > 0
+            ? "Detalle pendiente:\n" + string.Join("\n", items.Select(p => $"• {p.Concepto}: {CobrosHelper.FormatMoney(p.Resto)}"))
+            : "No te quedan cuotas pendientes ✅";
+        var msg = Data.Config.PlantillaRec
+            .Replace("{nombre}", c.Nombre)
+            .Replace("{detalle}", detalle)
+            .Replace("{saldo}", CobrosHelper.FormatMoney(v.Exigible))
+            .Replace("{enlace_pago}", Data.Config.EnlacePago);
+        await JS.InvokeVoidAsync("lcWhatsApp", c.Telefono, msg);
+        await Data.MarcarReclamadoAsync(new[] { c.Id }, CobrosHelper.HoyISO());
+    }
+
+    public void Dispose() => Data.OnChange -= Reload;
+}
