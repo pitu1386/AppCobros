@@ -1,11 +1,15 @@
 @inject ICobrosDataService Data
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="p-4 space-y-3 max-w-md mx-auto">
-    <div class="flex items-center justify-between">
-        <button @onclick="() => OnBack.InvokeAsync()" class="text-sm text-brandtext font-semibold">← Ajustes</button>
-        <h1 class="font-cond font-extrabold text-lg">Dashboard · @MesLabel</h1>
-        <span class="w-16"></span>
+    <div class="flex items-center justify-between gap-2">
+        @if (OnBack.HasDelegate)
+        {
+            <button @onclick="() => OnBack.InvokeAsync()" class="text-sm text-brandtext font-semibold shrink-0">← Ajustes</button>
+        }
+        <h1 class="font-cond font-extrabold text-xl">Panel · @MesLabel</h1>
+        <span class="w-4"></span>
     </div>
 
     <div class="grid grid-cols-2 gap-2">
@@ -44,11 +48,21 @@
     </div>
 
     <div class="rounded-xl bg-surface border border-line overflow-hidden">
-        <div class="px-4 pt-4 pb-2 text-xs uppercase tracking-wide text-faint font-bold">Top deudores</div>
+        <div class="px-4 pt-4 pb-2 text-xs uppercase tracking-wide text-faint font-bold">Mayores deudores</div>
         <div class="divide-y divide-line">
             @foreach (var v in _topDeudores)
             {
-                <ClienteRow V="v" OnClick="id => OnOpenCliente.InvokeAsync(id)" />
+                <div class="flex items-center gap-2 px-4 py-2.5">
+                    <button class="flex-1 min-w-0 text-left" @onclick="() => OnOpenCliente.InvokeAsync(v.Cliente.Id)">
+                        <span class="block font-semibold text-sm truncate">@v.Cliente.Nombre</span>
+                        <span class="block text-xs text-dangertext">Debe @v.SaldoTexto</span>
+                    </button>
+                    @if (!string.IsNullOrWhiteSpace(v.Cliente.Telefono))
+                    {
+                        <button @onclick="() => Reclamar(v)"
+                                class="shrink-0 rounded-lg bg-[#25D366] text-white font-bold px-3 py-1.5 text-xs">📲 Reclamar</button>
+                    }
+                </div>
             }
             @if (_topDeudores.Count == 0) { <p class="px-4 py-4 text-sm text-muted">Nadie debe ✅</p> }
         </div>
@@ -128,6 +142,19 @@
         _historial = barras.Select(b => b with { Pct = max > 0 ? b.Monto / max * 100 : 0 }).ToList();
 
         InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Reclamar(ClienteVista v)
+    {
+        var detalle = v.EsExigible
+            ? "Tenés una cuota pendiente de pago, por favor comunicate a la brevedad."
+            : "No te quedan cuotas pendientes ✅";
+        var msg = Data.Config.PlantillaRec
+            .Replace("{nombre}", v.Cliente.Nombre)
+            .Replace("{detalle}", detalle)
+            .Replace("{saldo}", v.SaldoTexto)
+            .Replace("{enlace_pago}", Data.Config.EnlacePago);
+        await JS.InvokeVoidAsync("lcWhatsApp", v.Cliente.Telefono, msg);
     }
 
     public void Dispose() => Data.OnChange -= Recalc;

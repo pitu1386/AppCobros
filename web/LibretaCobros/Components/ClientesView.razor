@@ -4,31 +4,41 @@
 <div class="p-4 space-y-3">
     <div class="flex items-center gap-2">
         <input @bind="_search" @bind:event="oninput" placeholder="Buscar cliente…"
-               class="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none focus:border-brand" />
+               class="flex-1 min-w-0 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none focus:border-brand" />
         <button @onclick="() => OnNuevoCliente.InvokeAsync()"
-                class="shrink-0 rounded-xl bg-brand text-white font-bold px-4 py-2.5 text-sm">+ Nuevo</button>
+                class="shrink-0 rounded-xl bg-brand text-white font-bold px-4 py-2.5 text-sm">＋ Nuevo</button>
     </div>
 
-    <div class="flex gap-2 flex-wrap text-xs">
-        <button @onclick="CycleOrden" class="rounded-full border border-line px-3 py-1.5 font-semibold">
-            @(_orden == "nombre" ? "Nombre A–Z" : "Saldo ↓")
+    <div class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 text-xs">
+        <button @onclick="CycleOrden" class="shrink-0 rounded-lg border border-line bg-surface px-3 py-2 font-semibold whitespace-nowrap">
+            <span class="text-muted">Orden:</span> <span class="text-brandtext">@OrdenLabel</span>
         </button>
-        <button @onclick="CycleEstado" class="rounded-full border border-line px-3 py-1.5 font-semibold">
-            @(_estado switch { "deuda" => "Con deuda", "aldia" => "Al día", "afavor" => "A favor", _ => "Todos" })
+        <button @onclick="CycleEstado" class="shrink-0 rounded-lg border border-line bg-surface px-3 py-2 font-semibold whitespace-nowrap">
+            <span class="text-muted">Estado:</span> <span class="text-brandtext">@EstadoLabel</span>
         </button>
-        <select @bind="_grupoId" class="rounded-full border border-line bg-surface px-3 py-1.5 font-semibold">
-            <option value="">Todos los grupos</option>
-            @foreach (var g in Data.Grupos) { <option value="@g.Id">@g.Nombre</option> }
-            <option value="__none">Sin grupo</option>
-        </select>
+        <label class="shrink-0 rounded-lg border border-line bg-surface px-3 py-2 font-semibold whitespace-nowrap flex items-center gap-1">
+            <span class="text-muted">Grupo:</span>
+            <select @bind="_grupoId" class="bg-transparent text-brandtext font-semibold outline-none">
+                <option value="">Todos</option>
+                @foreach (var g in Data.Grupos) { <option value="@g.Id">@g.Nombre</option> }
+                <option value="__none">Sin grupo</option>
+            </select>
+        </label>
     </div>
 
     @foreach (var grupo in Grupos())
     {
         <div class="rounded-xl bg-surface border border-line overflow-hidden">
-            <div class="flex items-center justify-between px-4 py-2.5 bg-well">
-                <span class="text-sm font-bold">@grupo.Titulo</span>
-                <span class="text-[11px] text-muted">@grupo.Subtitulo</span>
+            <div class="flex items-center justify-between px-4 py-2.5 bg-well gap-2">
+                <div class="min-w-0">
+                    <div class="text-xs font-bold uppercase tracking-wide truncate">@grupo.Titulo</div>
+                    <div class="text-[11px] text-muted truncate">@grupo.Subtitulo</div>
+                </div>
+                @if (!string.IsNullOrEmpty(grupo.GrupoId))
+                {
+                    <button @onclick="() => OnNuevoEnGrupo.InvokeAsync(grupo.GrupoId)"
+                            class="shrink-0 text-xs font-bold text-oktext border border-ok/40 rounded-lg px-2 py-1">＋ Agregar</button>
+                }
             </div>
             <div class="divide-y divide-line">
                 @foreach (var v in grupo.Items)
@@ -47,6 +57,7 @@
 @code {
     [Parameter] public EventCallback<string> OnOpenCliente { get; set; }
     [Parameter] public EventCallback OnNuevoCliente { get; set; }
+    [Parameter] public EventCallback<string> OnNuevoEnGrupo { get; set; }
 
     private string _search = "";
     private string _estado = "todos";
@@ -55,13 +66,16 @@
 
     private string MesKey => ClienteVista.MesActual;
 
+    private string OrdenLabel => _orden == "nombre" ? "Nombre A–Z" : "Saldo ↓";
+    private string EstadoLabel => _estado switch { "deuda" => "Con deuda", "aldia" => "Al día", "afavor" => "A favor", _ => "Todos" };
+
     protected override void OnInitialized() => Data.OnChange += OnChanged;
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
     private void CycleOrden() => _orden = _orden == "saldo" ? "nombre" : "saldo";
     private void CycleEstado() => _estado = _estado switch { "todos" => "deuda", "deuda" => "aldia", "aldia" => "afavor", _ => "todos" };
 
-    private record GrupoLista(string Titulo, string Subtitulo, List<ClienteVista> Items);
+    private record GrupoLista(string Titulo, string Subtitulo, string GrupoId, List<ClienteVista> Items);
 
     private bool CumpleEstado(ClienteVista v) => _estado switch
     {
@@ -90,19 +104,25 @@
             if (_grupoId != "" && _grupoId != g.Id) continue;
             var items = Ordenar(activos.Where(c => c.GrupoId == g.Id).Select(V).Where(CumpleEstado)).ToList();
             if (items.Count > 0 || !hayFiltros)
-                yield return new(g.Nombre, $"cuota {CobrosHelper.FormatMoney(g.Cuota)} · {items.Count}", items);
+            {
+                var total = g.Cuota * items.Count;
+                var sub = g.Cuota > 0
+                    ? $"cuota {CobrosHelper.FormatMoney(g.Cuota)} · {items.Count} · {CobrosHelper.FormatMoney(total)}"
+                    : $"{items.Count} cliente(s)";
+                yield return new(g.Nombre, sub, g.Id, items);
+            }
         }
 
         if (_grupoId is "" or "__none")
         {
             var sinGrupo = Ordenar(activos.Where(c => Data.GetGrupo(c.GrupoId) == null).Select(V).Where(CumpleEstado)).ToList();
-            if (sinGrupo.Count > 0) yield return new("Sin grupo", $"{sinGrupo.Count} cliente(s)", sinGrupo);
+            if (sinGrupo.Count > 0) yield return new("Sin grupo", $"{sinGrupo.Count} cliente(s)", "", sinGrupo);
         }
 
         var archivados = Data.Clientes.Where(c => c.Archivado && MatchSearch(c));
         if (_grupoId != "" && _grupoId != "__none") archivados = archivados.Where(c => c.GrupoId == _grupoId);
         var arch = Ordenar(archivados.Select(V)).ToList();
-        if (arch.Count > 0) yield return new("Archivados", $"{arch.Count} cliente(s)", arch);
+        if (arch.Count > 0) yield return new("Archivados", $"{arch.Count} cliente(s)", "", arch);
     }
 
     public void Dispose() => Data.OnChange -= OnChanged;

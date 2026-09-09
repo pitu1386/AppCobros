@@ -49,6 +49,7 @@
 
 @code {
     [Parameter] public string? ClienteId { get; set; }
+    [Parameter] public string? PreGrupoId { get; set; }
     [Parameter] public EventCallback<string> OnDone { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
@@ -68,7 +69,9 @@
         }
         else
         {
-            _grupoId = Data.Grupos.FirstOrDefault()?.Id ?? "";
+            _grupoId = !string.IsNullOrEmpty(PreGrupoId) && Data.GetGrupo(PreGrupoId) != null
+                ? PreGrupoId!
+                : Data.Grupos.FirstOrDefault()?.Id ?? "";
         }
     }
 
